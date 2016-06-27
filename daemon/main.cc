@@ -90,6 +90,13 @@ static int callback(
 					printf("IPv6 source: %s destination %s\n",
 						inet_ntop(AF_INET6, &iph->ip6_src, sbuf, INET6_ADDRSTRLEN),
 						inet_ntop(AF_INET6, &iph->ip6_dst, dbuf, INET6_ADDRSTRLEN));
+					protoent* protoinfo = getprotobynumber(iph->ip6_nxt);
+					if ( protoinfo ) {
+						printf("Protocol name: %s number: %d (hex %x)\n",
+							protoinfo->p_name, protoinfo->p_proto, protoinfo->p_proto);
+					} else {
+						perror("protoinfo");
+					}
 				} else {
 					perror("nfq_ip6_get_hdr");
 				}
