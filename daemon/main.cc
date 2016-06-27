@@ -1,9 +1,16 @@
 #include <cstdint>
+#include <cstdio> // printf
 #include <memory>
 #include <vector>
 #include <arpa/inet.h>
 #include <linux/netfilter.h>
-#include <libnetfilter_queue/libnetfilter_queue.h>
+#include <linux/ip.h>
+#include <netdb.h> // protoinfo
+extern "C" {
+	#include <libnetfilter_queue/libnetfilter_queue.h>
+	#include <libnetfilter_queue/libnetfilter_queue_ipv4.h>
+	#include <libnetfilter_queue/pktbuff.h>
+}
 
 using namespace std;
 
@@ -18,14 +25,51 @@ static int callback(
 	if ( ret > 0 )
 	{
 		printf("Packet received: %s\n", buf.data());
+		if ( ret > 4096 )
+			printf( "Output truncated (was %d bytes)\n", ret);
 	} else {
 		perror("nfq_snprintf_xml");
 	}
 	int verdict = NF_ACCEPT;
 	int id;
 	nfqnl_msg_packet_hdr* ph = nfq_get_msg_packet_hdr(nfa);
-	if (ph)
+	if (ph) {
 		id = ntohl(ph->packet_id);
+		uint16_t hwproto = ntohs(ph->hw_protocol);
+		printf("Hardware Proto: %x\n", hwproto);
+		unsigned char* data;
+		int length = nfq_get_payload(nfa, &data);
+		printf("Payload length: %d\n",length);
+		if ( hwproto == 0x0800 /* IPv4 */ ) {
+			printf("This is IPv4\n");
+			/* Transfer packet to userspace buffer */
+			pkt_buff* pbuf= pktb_alloc( AF_INET, data, length, 1280);
+			if ( ! pbuf ) {
+				perror("pkt_buff");
+			} else {
+				iphdr* iph = nfq_ip_get_hdr( pbuf );
+				if ( iph ) {
+					printf("IPv4 source: %x destination: %x proto: %x\n",
+						iph->saddr, iph->daddr, iph->protocol);
+					protoent* protoinfo = getprotobynumber(iph->protocol);
+					if ( protoinfo ) {
+						printf("Protocol name: %s number: %d (hex %x)\n",
+							protoinfo->p_name, protoinfo->p_proto, protoinfo->p_proto);
+					} else {
+						perror("protoinfo");
+					}
+				} else {
+					perror("nfq_ip_get_hdr");
+				}
+			}
+			pktb_free(pbuf);
+		}
+	}
+	/*
+	iphdr* iph = nfq_ip_get_hdr( nfa );
+	if ( !iph )
+		perror("Cant parse IP header");
+		*/
 	printf("Setting verdict ACCEPT for id %d\n",id);
 	nfq_set_verdict(qh, id, verdict, 0, nullptr);
 	return 0;
