@@ -6,9 +6,11 @@
 #include <linux/netfilter.h>
 #include <linux/ip.h>
 #include <netdb.h> // protoinfo
+#include <netinet/ip6.h>
 extern "C" {
 	#include <libnetfilter_queue/libnetfilter_queue.h>
 	#include <libnetfilter_queue/libnetfilter_queue_ipv4.h>
+	#include <libnetfilter_queue/libnetfilter_queue_ipv6.h>
 	#include <libnetfilter_queue/pktbuff.h>
 }
 
@@ -68,6 +70,27 @@ static int callback(
 				}
 			}
 			pktb_free(pbuf);
+		} else if ( hwproto == 0x86dd /* IPv6 */ ) {
+			printf("This is IPv6\n");
+			pkt_buff* pbuf = pktb_alloc( AF_INET6, data, length, 1280);
+			if ( !pbuf ) {
+				perror("pkt_buff");
+			} else {
+				ip6_hdr* iph = nfq_ip6_get_hdr(pbuf);
+				if ( !iph ) {
+					printf("Weird, cannot get flow label...\n");
+					iph = reinterpret_cast<ip6_hdr*> ( pktb_network_header(pbuf) );
+				}
+				if ( iph ) {
+					char sbuf[INET6_ADDRSTRLEN];
+					char dbuf[INET6_ADDRSTRLEN];
+					printf("IPv6 source: %s destination %s\n",
+						inet_ntop(AF_INET6, &iph->ip6_src, sbuf, INET6_ADDRSTRLEN),
+						inet_ntop(AF_INET6, &iph->ip6_dst, dbuf, INET6_ADDRSTRLEN));
+				} else {
+					perror("nfq_ip6_get_hdr");
+				}
+			}
 		}
 	}
 	/*
