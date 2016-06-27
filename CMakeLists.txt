@@ -1,5 +1,7 @@
 project(personal-firewall)
 cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 ### OPTIONS ###
 
