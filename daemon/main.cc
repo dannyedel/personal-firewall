@@ -50,7 +50,7 @@ static int callback(
 				iphdr* iph = nfq_ip_get_hdr( pbuf );
 				if ( iph ) {
 					printf("IPv4 source: %x destination: %x proto: %x\n",
-						iph->saddr, iph->daddr, iph->protocol);
+						ntohl(iph->saddr), ntohl(iph->daddr), iph->protocol);
 					protoent* protoinfo = getprotobynumber(iph->protocol);
 					if ( protoinfo ) {
 						printf("Protocol name: %s number: %d (hex %x)\n",
