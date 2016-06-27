@@ -8,4 +8,6 @@ extern "C" {
 	#include <libnetfilter_queue/libnetfilter_queue_ipv4.h>
 	#include <libnetfilter_queue/libnetfilter_queue_ipv6.h>
 	#include <libnetfilter_queue/pktbuff.h>
+	#include <libnetfilter_queue/libnetfilter_queue_tcp.h>
+	#include <libnetfilter_queue/libnetfilter_queue_udp.h>
 }

@@ -10,7 +10,13 @@
 
 #include "netfilter-callback.hh"
 
+#include "dissect-packet.hh"
+
+#include <iostream>
+
 using namespace std;
+using namespace boost::property_tree;
+using namespace PersonalFirewall;
 
 int callback(
 	nfq_q_handle* qh,
@@ -18,6 +24,23 @@ int callback(
 	nfq_data* nfa,
 	void* /* unused data */) {
 	printf("callback\n");
+
+	/** FIXME: Dissect packet to property tree **/
+
+	ptree pt = dissect_packet(nfa);
+
+	clog << "Packet facts:" << endl << "=====" << endl;
+	write_info(clog, pt);
+	clog << "=====" << endl;
+
+	/** FIXME DEBUG: Print property tree **/
+
+	/** FIXME: Check rules for verdict **/
+
+	/** FIXME: Print property tree to client **/
+
+	/** FIXME: Set verdict **/
+
 	vector<char> buf(4096);
 	int ret = nfq_snprintf_xml(buf.data(), 4096, nfa, NFQ_XML_ALL);
 	if ( ret > 0 )
