@@ -76,10 +76,13 @@ static int callback(
 			if ( !pbuf ) {
 				perror("pkt_buff");
 			} else {
-				ip6_hdr* iph = nfq_ip6_get_hdr(pbuf);
-				if ( !iph ) {
-					printf("Weird, cannot get flow label...\n");
-					iph = reinterpret_cast<ip6_hdr*> ( pktb_network_header(pbuf) );
+				ip6_hdr* iph = nullptr;
+				if ( ! pktb_network_header(pbuf) ) {
+					printf("Warning: Cannot get the network header using the library.\n"
+						"Using workaround.\n");
+					iph = reinterpret_cast<ip6_hdr*>( pktb_data( pbuf ) );
+				} else {
+					iph = nfq_ip6_get_hdr(pbuf);
 				}
 				if ( iph ) {
 					char sbuf[INET6_ADDRSTRLEN];
