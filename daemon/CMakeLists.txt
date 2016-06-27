@@ -5,6 +5,7 @@ pkg_search_module(NFQUEUE REQUIRED libnetfilter_queue)
 
 set(persfw_sources
 	main
+	netfilter-callback
 )
 
 add_definitions(-Wall -Wextra -Werror)
