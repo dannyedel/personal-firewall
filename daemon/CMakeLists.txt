@@ -14,7 +14,8 @@ add_executable(personal-firewalld
 )
 
 target_link_libraries(personal-firewalld
-	${NFQUEUE_LIBRARIES}
+	PRIVATE
+		${NFQUEUE_LIBRARIES}
 )
 
 include_directories(SYSTEM ${NFQUEUE_INCLUDE_DIRS})
