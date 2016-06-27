@@ -51,6 +51,11 @@ static int callback(
 				if ( iph ) {
 					printf("IPv4 source: %x destination: %x proto: %x\n",
 						ntohl(iph->saddr), ntohl(iph->daddr), iph->protocol);
+					char sbuf[ INET_ADDRSTRLEN ];
+					char dbuf[ INET_ADDRSTRLEN ];
+					printf("Source: %s Destination: %s\n",
+						inet_ntop(AF_INET, &iph->saddr, sbuf, INET_ADDRSTRLEN),
+						inet_ntop(AF_INET, &iph->daddr, dbuf, INET_ADDRSTRLEN));
 					protoent* protoinfo = getprotobynumber(iph->protocol);
 					if ( protoinfo ) {
 						printf("Protocol name: %s number: %d (hex %x)\n",
@@ -83,11 +88,13 @@ int main() {
 		exit(1);
 	}
 
+/*
 	printf("unbinding existing nf_queue handler for AF_INET (if any)\n");
 	if (nfq_unbind_pf(h, AF_INET) < 0) {
 		fprintf(stderr, "error during nfq_unbind_pf()\n");
 		exit(1);
 	}
+*/
 
 	printf("binding nfnetlink_queue as nf_queue handler for AF_INET\n");
 	if (nfq_bind_pf(h, AF_INET) < 0) {
