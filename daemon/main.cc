@@ -78,8 +78,8 @@ static int callback(
 			} else {
 				ip6_hdr* iph = nullptr;
 				if ( ! pktb_network_header(pbuf) ) {
-					printf("Warning: Cannot get the network header using the library.\n"
-						"Using workaround.\n");
+					printf("Warning: Cannot get the network header using the library, "
+						"using workaround.\n");
 					iph = reinterpret_cast<ip6_hdr*>( pktb_data( pbuf ) );
 				} else {
 					iph = nfq_ip6_get_hdr(pbuf);
