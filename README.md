@@ -20,7 +20,7 @@ iptables -t nat -A OUTPUT -j NFQUEUE
 
 ### Same for incoming packets
 iptables -t nat -F INPUT
-iptables -t nat -A INPUT -o lo -j ACCEPT
+iptables -t nat -A INPUT -i lo -j ACCEPT
 iptables -t nat -A INPUT -j NFQUEUE
 ```
 
