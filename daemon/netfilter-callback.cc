@@ -23,7 +23,7 @@ int callback(
 	nfgenmsg* /* unused nfmsg */,
 	nfq_data* nfa,
 	void* /* unused data */) {
-	printf("callback\n");
+	printf("callback() received a packet\n");
 
 	/** FIXME: Dissect packet to property tree **/
 
@@ -121,6 +121,9 @@ int callback(
 				}
 			}
 		}
+	} else {
+		cerr << "FATAL: Cannot open packet header" << endl;
+		exit(2);
 	}
 	/*
 	iphdr* iph = nfq_ip_get_hdr( nfa );

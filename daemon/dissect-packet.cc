@@ -1,6 +1,7 @@
 #include "dissect-packet.hh"
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <arpa/inet.h>
 #include <linux/ip.h> // ip_hdr
 #include <netdb.h> //protoinfo
@@ -178,14 +179,53 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 	stream<file_descriptor_source> fuser{ fileno(p.get()), never_close_handle };
 
-	string line;
-	while(getline(fuser,line)) {
-		istringstream is(line);
-		string pid;
-		is >> pid;
-		pt.put("pid", pid);
-		clog << "PID:" << pid << endl;
+	{
+		string line;
+		while(getline(fuser,line)) {
+			istringstream is(line);
+			string pid;
+			is >> pid;
+			pt.put("pid", pid);
+			clog << "PID:" << pid << endl;
+		}
 	}
+
+	const string procpath = "/proc/"+pt.get<string>("pid");
+
+	{
+		// get executable name
+		vector<char> exename(4096);
+		ssize_t size = readlink(
+			(procpath+"/exe").c_str(),
+			exename.data(),
+			4096);
+		if ( size < 0 ) {
+			perror("readlink");
+		} else if ( size < 4096 ) {
+			exename.at(size)='\0';
+			pt.put("binary", exename.data());
+		}
+	}
+
+	{
+		struct stat stats;
+		int rc = stat( procpath.c_str(), &stats);
+		if ( rc != 0 )
+		{
+			perror("stat binary");
+		} else {
+			pt.put("uid", stats.st_uid);
+			pt.put("gid", stats.st_gid);
+		}
+	}
+
+	{
+		int uid=pt.get<int>("uid");
+		struct passwd pwd_entry;
+		vector<char> buf(4096);
+	}
+
+
 
 	} catch( ptree_bad_path& e ) {
 		clog << "Could not figure out socket owner: Bad path" << endl;
