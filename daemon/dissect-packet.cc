@@ -207,6 +207,10 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 			exename.at(size)='\0';
 			pt.put("binary", exename.data());
 		}
+		ifstream cmdline{ procpath+"/cmdline" };
+		string buf;
+		getline(cmdline, buf);
+		pt.put("cmdline", buf);
 	}
 
 	{
