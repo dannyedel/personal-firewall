@@ -1,6 +1,7 @@
 #include "dissect-packet.hh"
 #include <stdexcept>
 #include <string>
+#include <utility> // pair
 #include <vector>
 #include <arpa/inet.h>
 #include <linux/ip.h> // ip_hdr
@@ -21,6 +22,8 @@ using namespace boost::iostreams;
 
 namespace{
 
+	const bool doDnsLookups=false;
+
 struct LowlevelFailure: public runtime_error {
 	LowlevelFailure(const std::string& functionName):
 		runtime_error(functionName+" returned an error code")
@@ -31,6 +34,28 @@ struct LowlevelFailure: public runtime_error {
 struct InvalidDirection: public runtime_error {
 	InvalidDirection(const std::string& direction):
 		runtime_error("Invalid direction: "+direction)
+	{
+	}
+};
+
+struct ReverseLookupFailed: public runtime_error{
+	ReverseLookupFailed(const std::string& ipaddress):
+		runtime_error("Reverse lookup failed for "+ipaddress)
+	{
+	}
+};
+
+string const operator + ( const string& s , const vector<string>& vec) {
+	string ret = s;
+	for(auto& str: vec) {
+		ret+=str+", ";
+	}
+	return ret;
+}
+
+struct ForwardLookupMismatch: public runtime_error{
+	ForwardLookupMismatch(const std::string& ipaddress, const std::string& hostname, const vector<string> addresses):
+		runtime_error("Reverse lookup for "+ipaddress+" resulted in "+hostname+" but this hostname resolves to "+addresses)
 	{
 	}
 };
@@ -48,6 +73,35 @@ struct PopenDeleter {
 			clog << "pclose() returned "<< rc << endl;
 	}
 };
+
+/** Determine whether the packet described by pt is a
+ * dns packet, to break loops when resolving hostnames
+ * */
+bool is_dns_packet(const ptree& pt) {
+	/* DNS happens via UDP */
+	if ( pt.get<string>("layer4protocol") != "udp" )
+		return false;
+
+	/* Packet was neither generated nor targeted for
+	 * the local machine */
+	if ( pt.get<string>("direction") == "forward" )
+		return false;
+
+	/* Packet from a nameserver to us */
+	if ( pt.get<string>("direction") == "input" &&
+		pt.get<int>("sourceport") == 53 ) {
+		return true;
+	}
+
+	/* Packet from us to a nameserver */
+	if ( pt.get<string>("direction") == "output" &&
+		pt.get<int>("destinationport") == 53 ) {
+		return true;
+	}
+
+	/* Just a regular UDP packet. */
+	return false;
+}
 
 } // end anon namespace
 
@@ -151,6 +205,25 @@ void PersonalFirewall::dissect_ipv4_header(
 	}
 
 	get_socket_owner_program(pt);
+
+	/* Unless this is a DNS packet from or to this machine,
+	 * resolve all addresses involved */
+	if ( doDnsLookups && ! is_dns_packet(pt)) {
+		try {
+			pt.put("sourcehostname", dns_reverse_lookup( pt.get<string>("source") ) );
+		} catch( ReverseLookupFailed& e) {
+			clog << e.what() << endl;
+		} catch( ForwardLookupMismatch&e ) {
+			clog << e.what() << endl;
+		}
+		try {
+			pt.put("destinationhostname", dns_reverse_lookup( pt.get<string>("destination") ));
+		} catch( ReverseLookupFailed&e ) {
+			clog << e.what() << endl;
+		} catch( ForwardLookupMismatch&e) {
+			clog << e.what() << endl;
+		}
+	}
 }
 
 void PersonalFirewall::dissect_tcp_header(ptree& pt, pkt_buff* pktb) {
@@ -179,7 +252,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 	}
 	string portnumber;
 	if ( direction == "forward" ) {
-		clog << "Cannot get socket owner for forward packets" << endl;
+		// Cannot get socket owner for forward packets
 		return;
 	} else if ( direction == "input" ) {
 		portnumber = pt.get<string>("destinationport");
@@ -267,7 +340,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 
 	} catch( ptree_bad_path& e ) {
-		clog << "Could not figure out socket owner: Bad path" << endl << "what(): " << e.what() << endl;
+		clog << "Could not figure out socket owner: Bad path: " << e.what() << endl;
 	}
 }
 
@@ -299,3 +372,60 @@ void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*ip
 		dissect_udp_header(pt, pktb);
 	}
 }
+
+namespace {
+	pair<struct sockaddr,socklen_t> const to_sockaddr(const string& ipaddress) {
+		pair<struct sockaddr, socklen_t> ret;
+		{
+			struct sockaddr_in& sock = reinterpret_cast<sockaddr_in&>( ret.first );
+			ret.second = sizeof( sockaddr_in );
+			sock.sin_family= AF_INET;
+			sock.sin_port = 0;
+			/* Try as IPv4 */
+			static_assert( sizeof(sockaddr_in) <= sizeof( sockaddr), "sockaddr too small for ipv4" );
+			ret.second = sizeof(sockaddr_in);
+			ret.first.sa_family = AF_INET;
+			int rc = inet_pton( AF_INET, ipaddress.c_str(), &sock.sin_addr );
+			if ( rc == 1 ) {
+				return ret;
+			}
+		}
+
+		{
+			/* Try as IPv6 */
+			struct sockaddr_in6& sock = reinterpret_cast<sockaddr_in6&>( ret.first );
+			ret.second = sizeof( sockaddr_in6 );
+			sock.sin6_family = AF_INET6;
+			sock.sin6_port = 0;
+			static_assert( sizeof(sockaddr_in) <= sizeof(sockaddr), "sockaddr too small for ipv6");
+			ret.second=sizeof(sockaddr_in6);
+			ret.first.sa_family = AF_INET6;
+			int rc = inet_pton( AF_INET6, ipaddress.c_str(), &sock.sin6_addr );
+			if ( rc == 1 ) {
+				return ret;
+			}
+		}
+
+		/* Both failed */
+		throw LowlevelFailure("inet_pton cannot parse: "+ipaddress);
+	}
+}
+
+string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
+	auto p = to_sockaddr(ipaddress);
+
+	vector<char> buf(1024);
+
+	int rc = getnameinfo(&( p.first ), p.second, buf.data(), buf.size(), nullptr, 0, NI_NAMEREQD);
+
+	if ( rc != 0 )
+	{
+		clog << "getnameinfo returned error " << rc <<": " << gai_strerror(rc) <<
+			" while trying to resolve " << ipaddress << endl;
+		throw ReverseLookupFailed(ipaddress);
+	}
+
+	return string(buf.data());
+}
+
+
