@@ -4,6 +4,7 @@
 #include <vector>
 #include <arpa/inet.h>
 #include <linux/ip.h> // ip_hdr
+#include <netinet/ip6.h> // ip6_hdr
 #include <netdb.h> //protoinfo
 #include <iostream> // clog
 #include <linux/tcp.h> // tcphdr
@@ -92,7 +93,20 @@ ptree PersonalFirewall::dissect_packet(nfq_data* nfa) {
 		}
 		dissect_ipv4_header(pt, pbuf.get(), iph );
 	} else if ( pt.get<int>("hwproto") == 0x86dd ) {
-		pt.put("FIXME", "Ipv6");
+		unique_ptr<pkt_buff,PktbDeleter> pbuf{
+			pktb_alloc(AF_INET6, data, length, 1280) };
+		if ( !pbuf ) {
+			throw LowlevelFailure("pktb_alloc (ipv6)");
+		}
+		ip6_hdr * iph = nullptr;
+		if ( ! pktb_network_header(pbuf.get()) ) {
+			printf("Warning: Cannot get the network header using the library, "
+				"using workaround.\n");
+			iph = reinterpret_cast<ip6_hdr*>( pktb_data( pbuf.get() ) );
+		} else {
+			iph = nfq_ip6_get_hdr(pbuf.get());
+		}
+		dissect_ipv6_header(pt, pbuf.get(), iph);
 	}
 
 	return pt;
@@ -125,28 +139,34 @@ void PersonalFirewall::dissect_ipv4_header(
 		clog << "Unknown protocol number: " << iph->protocol << endl;
 	}
 
+	if ( 0 != nfq_ip_set_transport_header(pktb, iph) )
+		throw LowlevelFailure("nfq_ip_set_transport_header");
 	if ( pt.get<string>("layer4protocol") == "tcp" )
 	{
-		if ( 0 != nfq_ip_set_transport_header(pktb, iph) )
-			throw LowlevelFailure("nfq_ip_set_transport_header");
-		tcphdr * tcp = nfq_tcp_get_hdr(pktb);
-		if ( ! tcp )
-			throw LowlevelFailure("nfq_tcp_get_hdr");
-		pt.put("sourceport", ntohs(tcp->source));
-		pt.put("destinationport", ntohs(tcp->dest));
+		dissect_tcp_header(pt, pktb);
 	}
 	else if ( pt.get<string>("layer4protocol") == "udp" )
 	{
-		if ( 0 != nfq_ip_set_transport_header(pktb, iph) )
-			throw LowlevelFailure("nfq_ip_set_transport_header");
-		udphdr * udp = nfq_udp_get_hdr(pktb);
-		if ( ! udp )
-			throw LowlevelFailure("nfq_udp_get_hdr");
-		pt.put("sourceport", ntohs(udp->source));
-		pt.put("destinationport", ntohs(udp->dest));
+		dissect_udp_header(pt, pktb);
 	}
 
 	get_socket_owner_program(pt);
+}
+
+void PersonalFirewall::dissect_tcp_header(ptree& pt, pkt_buff* pktb) {
+	tcphdr * tcp = nfq_tcp_get_hdr(pktb);
+	if ( ! tcp )
+		throw LowlevelFailure("nfq_tcp_get_hdr");
+	pt.put("sourceport", ntohs(tcp->source));
+	pt.put("destinationport", ntohs(tcp->dest));
+}
+
+void PersonalFirewall::dissect_udp_header(ptree& pt, pkt_buff* pktb) {
+	udphdr * udp = nfq_udp_get_hdr(pktb);
+	if ( ! udp )
+		throw LowlevelFailure("nfq_udp_get_hdr");
+	pt.put("sourceport", ntohs(udp->source));
+	pt.put("destinationport", ntohs(udp->dest));
 }
 
 void PersonalFirewall::get_socket_owner_program(ptree& pt) {
@@ -247,6 +267,35 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 
 	} catch( ptree_bad_path& e ) {
-		clog << "Could not figure out socket owner: Bad path" << endl;
+		clog << "Could not figure out socket owner: Bad path" << endl << "what(): " << e.what() << endl;
+	}
+}
+
+void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*iph) {
+	char sbuf[INET6_ADDRSTRLEN];
+	char dbuf[INET6_ADDRSTRLEN];
+
+	const char * source = inet_ntop(AF_INET6, &iph->ip6_src, sbuf, INET6_ADDRSTRLEN);
+	const char * dest = inet_ntop(AF_INET6, &iph->ip6_dst, dbuf, INET6_ADDRSTRLEN);
+	pt.put("source", source);
+	pt.put("source6", source);
+	pt.put("destination", dest);
+	pt.put("destination6", dest);
+	protoent* protoinfo = getprotobynumber(iph->ip6_nxt);
+	if ( protoinfo ) {
+		pt.put("layer4protocol", protoinfo->p_name);
+		pt.put("layer4protocolnumber", protoinfo->p_proto);
+	} else {
+		throw LowlevelFailure("getprotobynumber");
+	}
+
+	int rc= nfq_ip6_set_transport_header(pktb, iph, pt.get<uint8_t>("layer4protocolnumber"));
+	if ( rc != 1) {
+		throw LowlevelFailure("nfq_ip6_set_transport_header");
+	}
+	if ( pt.get<string>("layer4protocol") == "tcp" ) {
+		dissect_tcp_header(pt, pktb);
+	} else if ( pt.get<string>("layer4protocol") == "udp" ) {
+		dissect_udp_header(pt, pktb);
 	}
 }
