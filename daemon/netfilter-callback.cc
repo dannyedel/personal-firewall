@@ -41,16 +41,6 @@ int callback(
 
 	/** FIXME: Set verdict **/
 
-	vector<char> buf(4096);
-	int ret = nfq_snprintf_xml(buf.data(), 4096, nfa, NFQ_XML_ALL);
-	if ( ret > 0 )
-	{
-		printf("Packet received: %s\n", buf.data());
-		if ( ret > 4096 )
-			printf( "Output truncated (was %d bytes)\n", ret);
-	} else {
-		perror("nfq_snprintf_xml");
-	}
 	int verdict = NF_ACCEPT;
 	int id;
 	nfqnl_msg_packet_hdr* ph = nfq_get_msg_packet_hdr(nfa);
