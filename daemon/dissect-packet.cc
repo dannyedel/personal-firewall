@@ -209,8 +209,11 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		}
 		ifstream cmdline{ procpath+"/cmdline" };
 		string buf;
-		getline(cmdline, buf);
+		getline(cmdline, buf, '\0' );
 		pt.put("cmdline", buf);
+		while(getline(cmdline,buf,'\0')) {
+			pt.add("cmdline.param", buf);
+		}
 	}
 
 	{
