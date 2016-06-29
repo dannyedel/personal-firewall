@@ -8,7 +8,8 @@ build:
         - sed -e 's|httpredir.debian.org/debian|mirror.hetzner.de/debian/packages|g'
           -i /etc/apt/sources.list
         - apt-get -yqq update
-        - apt-get -y install build-essential libboost-all-dev cmake pkg-config
+        - apt-get -y install eatmydata
+        - eatmydata apt-get -y install build-essential libboost-all-dev cmake pkg-config
         - mkdir build
         - cd build
         - cmake .. -DCMAKE_BUILD_TYPE=Debug
