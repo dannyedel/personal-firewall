@@ -1,3 +1,8 @@
+cache:
+    paths:
+        - /var/cache/apt
+        - /var/lib/apt/lists
+
 build:
     script:
         - sed -e 's|httpredir.debian.org/debian|mirror.hetzner.de/debian/packages|g'
