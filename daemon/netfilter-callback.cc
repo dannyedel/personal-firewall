@@ -62,33 +62,6 @@ int callback(
 		int length = nfq_get_payload(nfa, &data);
 		printf("Payload length: %d\n",length);
 		if ( hwproto == 0x0800 /* IPv4 */ ) {
-			printf("This is IPv4\n");
-			/* Transfer packet to userspace buffer */
-			pkt_buff* pbuf= pktb_alloc( AF_INET, data, length, 1280);
-			if ( ! pbuf ) {
-				perror("pkt_buff");
-			} else {
-				iphdr* iph = nfq_ip_get_hdr( pbuf );
-				if ( iph ) {
-					printf("IPv4 source: %x destination: %x proto: %x\n",
-						ntohl(iph->saddr), ntohl(iph->daddr), iph->protocol);
-					char sbuf[ INET_ADDRSTRLEN ];
-					char dbuf[ INET_ADDRSTRLEN ];
-					printf("Source: %s Destination: %s\n",
-						inet_ntop(AF_INET, &iph->saddr, sbuf, INET_ADDRSTRLEN),
-						inet_ntop(AF_INET, &iph->daddr, dbuf, INET_ADDRSTRLEN));
-					protoent* protoinfo = getprotobynumber(iph->protocol);
-					if ( protoinfo ) {
-						printf("Protocol name: %s number: %d (hex %x)\n",
-							protoinfo->p_name, protoinfo->p_proto, protoinfo->p_proto);
-					} else {
-						perror("protoinfo");
-					}
-				} else {
-					perror("nfq_ip_get_hdr");
-				}
-			}
-			pktb_free(pbuf);
 		} else if ( hwproto == 0x86dd /* IPv6 */ ) {
 			printf("This is IPv6\n");
 			pkt_buff* pbuf = pktb_alloc( AF_INET6, data, length, 1280);
