@@ -8,6 +8,8 @@
 #include <iostream> // clog
 #include <linux/tcp.h> // tcphdr
 #include <linux/udp.h> // udphdr
+#include <sys/types.h> // getpwuid_r
+#include <pwd.h> // struct passwd
 #include <sys/stat.h>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -220,9 +222,19 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 	}
 
 	{
-		int uid=pt.get<int>("uid");
+		uid_t uid=pt.get<uid_t>("uid");
 		struct passwd pwd_entry;
+		struct passwd* pwd_result;
 		vector<char> buf(4096);
+		int rc = getpwuid_r(uid, &pwd_entry, buf.data(), buf.size(), &pwd_result);
+		if ( rc != 0 )
+		{
+			perror("getpwuid_r");
+		}
+		else
+		{
+			pt.put("owner", pwd_result->pw_name);
+		}
 	}
 
 
