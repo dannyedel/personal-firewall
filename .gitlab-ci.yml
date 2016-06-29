@@ -1,7 +1,7 @@
 build:
     script:
         - apt-get -yqq update
-        - apt-get -y install build-essential libboost-all
+        - apt-get -y install build-essential libboost-all-dev
         - mkdir build
         - cd build
         - cmake .. -DCMAKE_BUILD_TYPE=Debug
