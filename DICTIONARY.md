@@ -19,63 +19,63 @@ facts
 List of all the possible names in a `facts` property tree (things you
 can inspect about a packet).
 
-direction::
-	(string) Direction of the packet, either `input`, `output` or `forward`.
+direction
+:	(string) Direction of the packet, either `input`, `output` or `forward`.
 	This should™ be equivalent to the iptables chain
 
-sourcehostname::
-	(string) Result of a reverse lookup of the packet's source address.  If a
+sourcehostname
+:	(string) Result of a reverse lookup of the packet's source address.  If a
 	forward-lookup of the given hostname does **not** include the
 	ip address of the packet, the hostname field will not be present
 
-destinationhostname::
-	(string) Result of a reverse lookup of the packet's destination
+destinationhostname
+:	(string) Result of a reverse lookup of the packet's destination
 	address.  If a forward-lookup of the resulting hostname does **not** include
 	the packet's address, the hostname field will not be present.
 
-source::
-	(string) the source IP (v4 or v6)
+source
+:	(string) the source IP (v4 or v6)
 
-destination::
-	(string) the destination IP (v4 or v6)
+destination
+:	(string) the destination IP (v4 or v6)
 
-source4::
-	(string) IPv4 source address
+source4
+:	(string) IPv4 source address
 
-source6::
-	(string) IPv6 source address
+source6
+:	(string) IPv6 source address
 
-destination4::
-	(string) IPv4 destination address
+destination4
+:	(string) IPv4 destination address
 
-destination6::
-	(string) IPv6 destination address
+destination6
+:	(string) IPv6 destination address
 
-layer4protocol::
-	(string) official protocol name, see `getprotobynumber(3)`.
+layer4protocol
+:	(string) official protocol name, see `getprotobynumber(3)`.
 	If `getprotobynumber(3)` does not know about the protocol, this
 	field will not be present.
 
-layer4protocolnumber::
-	(integer) protocol number from the IP packet.
+layer4protocolnumber
+:	(integer) protocol number from the IP packet.
 
-sourceport::
-	(integer) source port number (currently only for tcp and udp)
+sourceport
+:	(integer) source port number (currently only for tcp and udp)
 
-destinationport::
-	(integer) destination port number (currently only for tcp and udp)
+destinationport
+:	(integer) destination port number (currently only for tcp and udp)
 
-pid::
-	(integer) Process-ID owning the local endpoint
+pid
+:	(integer) Process-ID owning the local endpoint
 
-binary::
-	(string) path to the binary owning the local endpoint, if available
+binary
+:	(string) path to the binary owning the local endpoint, if available
 
-user::
-	(string) name of the user owning the local endpoint, if available
+user
+:	(string) name of the user owning the local endpoint, if available
 
-userid::
-	(integer) id of the user owning the local endpoint, if available
+userid
+:	(integer) id of the user owning the local endpoint, if available
 
 
 rules
@@ -89,18 +89,18 @@ In addition, there are a few pseudo-fields that allow checking both the
 source and the destination, similar to how tcpdump's "host" or "port"
 specifier work.
 
-hostname::
-	Matches if at least one of `sourcehostname` or `destinationhostname`
+hostname
+:	Matches if at least one of `sourcehostname` or `destinationhostname`
 	matches.
 
-hostnamematch::
-	Same as hostname, but allows wildcards. For example, `*.example.com`
+hostnamematch
+:	Same as hostname, but allows wildcards. For example, `*.example.com`
 	would match all subdomains of .example.com (but not example.com
 	itself).  See `fnmatch(3)` for the syntax.
 
-address::
-	Matches if at least one of `sourceaddress` or `destinationaddress`
+address
+:	Matches if at least one of `sourceaddress` or `destinationaddress`
 	match.
 
-port::
-	Matches if at least one of `sourceport` or `destinationport` match.
+port
+:	Matches if at least one of `sourceport` or `destinationport` match.
