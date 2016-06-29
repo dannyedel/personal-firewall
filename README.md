@@ -10,16 +10,21 @@ Example using the OUTPUT chain:
 
 ```bash
 ### Clear all output rules
-iptables -F OUTPUT
+iptables -t nat -F OUTPUT
 ### Allow all packets to the local machine
-iptables -A OUTPUT -o lo -j ACCEPT
+iptables -t nat -A OUTPUT -o lo -j ACCEPT
 ### If you have a completely trusted network, add this
-# iptables -A OUTPUT -o ethX -j ACCEPT
+# iptables -t nat -A OUTPUT -o ethX -j ACCEPT
 ### Send the rest to the firewall application
-iptables -A OUTPUT -j NFQUEUE
+iptables -t nat -A OUTPUT -j NFQUEUE
+
+### Same for incoming packets
+iptables -t nat -F INPUT
+iptables -t nat -A INPUT -o lo -j ACCEPT
+iptables -t nat -A INPUT -j NFQUEUE
 ```
 
-To speed things up, you could use the `nat` table, which will only queue
+To speed things up, we use the `nat` table, which only queues
 the first packet of each connection, instead of every single packet.
-While this will remove the ability to stop already-opened connections,
-it will massively reduce CPU load.
+While this removes the ability to stop already-opened connections,
+it massively reduces CPU load.
