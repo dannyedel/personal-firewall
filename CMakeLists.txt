@@ -7,6 +7,8 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 ### END OPTIONS ###
 
+add_definitions(-std=c++14)
+
 # the daemon interactive with netfilter, running with
 # elevated privileges
 add_subdirectory(daemon)
