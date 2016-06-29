@@ -32,7 +32,18 @@ int main() {
 	}
 
 	nfq_q_handle* qh=nfq_create_queue(h, 0, callback, nullptr);
-	nfq_set_mode(qh, NFQNL_COPY_PACKET, 65531);
+	{
+		int rc = nfq_set_mode(qh, NFQNL_COPY_PACKET, 65531);
+		if ( rc ) {
+			perror("nfq_set_mode");
+		}
+	}
+	{
+		int rc = nfq_set_queue_maxlen(qh, /* 10M */ 10*1024*1024 );
+		if ( rc ) {
+			perror("nfq_set_queue_maxlen");
+		}
+	}
 	if ( !qh ) {
 		perror("nfq_q_handle");
 	}
@@ -47,7 +58,7 @@ int main() {
 			printf("Got some\n");
 			nfq_handle_packet(h, buf, rv); /* send packet to callback */
 		} else {
-			break;
+			printf("recv() returned %d\n", rv);
 		}
 	}
 
