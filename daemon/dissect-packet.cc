@@ -6,6 +6,8 @@
 #include <netdb.h> //protoinfo
 #include <iostream> // clog
 #include <linux/tcp.h> // tcphdr
+#include <linux/udp.h> // udphdr
+#include <sys/stat.h>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 
@@ -129,6 +131,16 @@ void PersonalFirewall::dissect_ipv4_header(
 			throw LowlevelFailure("nfq_tcp_get_hdr");
 		pt.put("sourceport", ntohs(tcp->source));
 		pt.put("destinationport", ntohs(tcp->dest));
+	}
+	else if ( pt.get<string>("layer4protocol") == "udp" )
+	{
+		if ( 0 != nfq_ip_set_transport_header(pktb, iph) )
+			throw LowlevelFailure("nfq_ip_set_transport_header");
+		udphdr * udp = nfq_udp_get_hdr(pktb);
+		if ( ! udp )
+			throw LowlevelFailure("nfq_udp_get_hdr");
+		pt.put("sourceport", ntohs(udp->source));
+		pt.put("destinationport", ntohs(udp->dest));
 	}
 
 	get_socket_owner_program(pt);
