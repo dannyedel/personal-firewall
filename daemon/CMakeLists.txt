@@ -2,6 +2,7 @@
 
 include(FindPkgConfig)
 pkg_search_module(NFQUEUE REQUIRED libnetfilter_queue)
+find_package(Boost REQUIRED COMPONENTS iostreams )
 
 set(persfw_sources
 	main
@@ -18,6 +19,7 @@ add_executable(personal-firewalld
 target_link_libraries(personal-firewalld
 	PRIVATE
 		${NFQUEUE_LIBRARIES}
+		${Boost_LIBRARIES}
 )
 
 include_directories(SYSTEM ${NFQUEUE_INCLUDE_DIRS})

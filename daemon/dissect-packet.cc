@@ -6,9 +6,12 @@
 #include <netdb.h> //protoinfo
 #include <iostream> // clog
 #include <linux/tcp.h> // tcphdr
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
 
 using namespace std;
 using namespace boost::property_tree;
+using namespace boost::iostreams;
 
 namespace{
 
@@ -19,9 +22,24 @@ struct LowlevelFailure: public runtime_error {
 	}
 };
 
+struct InvalidDirection: public runtime_error {
+	InvalidDirection(const std::string& direction):
+		runtime_error("Invalid direction: "+direction)
+	{
+	}
+};
+
 struct PktbDeleter {
 	void operator() (pkt_buff*b) {
 		pktb_free(b);
+	}
+};
+
+struct PopenDeleter {
+	void operator() ( FILE* p) {
+		int rc = pclose(p);
+		if ( 0 != rc )
+			clog << "pclose() returned "<< rc << endl;
 	}
 };
 
@@ -37,6 +55,17 @@ ptree PersonalFirewall::dissect_packet(nfq_data* nfa) {
 
 	pt.put("packetid", ntohl(ph->packet_id));
 	pt.put("hwproto", ntohs(ph->hw_protocol));
+
+	int ininterface = nfq_get_indev(nfa);
+	int outinterface = nfq_get_outdev(nfa);
+
+	if ( ininterface && outinterface ) {
+		pt.put("direction", "forward");
+	} else if ( ininterface ) {
+		pt.put("direction", "input");
+	} else if ( outinterface ) {
+		pt.put("direction", "output");
+	}
 
 	/** Inspect the packet contents, a.k.a. payload */
 	unsigned char* data;
@@ -100,5 +129,53 @@ void PersonalFirewall::dissect_ipv4_header(
 			throw LowlevelFailure("nfq_tcp_get_hdr");
 		pt.put("sourceport", ntohs(tcp->source));
 		pt.put("destinationport", ntohs(tcp->dest));
+	}
+
+	get_socket_owner_program(pt);
+}
+
+void PersonalFirewall::get_socket_owner_program(ptree& pt) {
+	try {
+	const string direction = pt.get<string>("direction");
+	const string protocolname = pt.get<string>("layer4protocol");
+	if ( protocolname.empty() ) {
+		clog << "No protocol name, cannot get socket owner" << endl;
+		return;
+	}
+	string portnumber;
+	if ( direction == "forward" ) {
+		clog << "Cannot get socket owner for forward packets" << endl;
+		return;
+	} else if ( direction == "input" ) {
+		portnumber = pt.get<string>("destinationport");
+	} else if ( direction == "output" ) {
+		portnumber = pt.get<string>("sourceport");
+	} else {
+		throw InvalidDirection(direction );
+	}
+
+	const string commandline = "/bin/fuser "+portnumber+"/"+protocolname;
+
+	/// FIXME use popen
+
+	unique_ptr<FILE, PopenDeleter> p { popen(commandline.c_str(), "r") };
+	if ( ! p ) {
+		clog << "Cannot call " +commandline << endl;
+		return;
+	}
+
+	stream<file_descriptor_source> fuser{ fileno(p.get()), never_close_handle };
+
+	string line;
+	while(getline(fuser,line)) {
+		istringstream is(line);
+		string pid;
+		is >> pid;
+		pt.put("pid", pid);
+		clog << "PID:" << pid << endl;
+	}
+
+	} catch( ptree_bad_path& e ) {
+		clog << "Could not figure out socket owner: Bad path" << endl;
 	}
 }

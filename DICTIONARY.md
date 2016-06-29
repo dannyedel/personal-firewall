@@ -65,6 +65,9 @@ sourceport::
 destinationport::
 	(integer) destination port number (currently only for tcp and udp)
 
+pid::
+	(integer) Process-ID owning the local endpoint
+
 binary::
 	(string) path to the binary owning the local endpoint, if available
 

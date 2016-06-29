@@ -10,4 +10,6 @@ boost::property_tree::ptree dissect_packet(nfq_data*);
 
 void dissect_ipv4_header(boost::property_tree::ptree&, pkt_buff*, iphdr*);
 
+void get_socket_owner_program(boost::property_tree::ptree&);
+
 }
