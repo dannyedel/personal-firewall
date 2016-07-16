@@ -78,6 +78,12 @@ userid
 :	(integer) id of the user owning the local endpoint, if available
 
 
+metadata
+--------
+
+hostnamelookupfailed
+:	(string) "true" if a DNS Lookup has been attempted, but failed.
+
 rules
 -----
 
