@@ -31,8 +31,6 @@ int callback(
 	write_info(clog, pt.facts);
 	clog << "=====" << endl;
 
-	/** FIXME DEBUG: Print property tree **/
-
 	/** FIXME: Check rules for verdict **/
 
 	/** FIXME: Print property tree to client **/
