@@ -81,8 +81,9 @@ userid
 metadata
 --------
 
-hostnamelookupfailed
-:	(string) "true" if a DNS Lookup has been attempted, but failed.
+hostnamelookupdone
+:	(string) "true" if a DNS Lookup has been attempted.  Used to break
+	loop.
 
 rules
 -----
