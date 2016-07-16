@@ -105,7 +105,7 @@ bool is_dns_packet(const ptree& pt) {
 
 } // end anon namespace
 
-ptree PersonalFirewall::dissect_packet(nfq_data* nfa) {
+const Packet PersonalFirewall::dissect_packet(nfq_data* nfa) {
 	ptree pt;
 
 	nfqnl_msg_packet_hdr* ph = nfq_get_msg_packet_hdr(nfa);
@@ -163,7 +163,7 @@ ptree PersonalFirewall::dissect_packet(nfq_data* nfa) {
 		dissect_ipv6_header(pt, pbuf.get(), iph);
 	}
 
-	return pt;
+	return Packet{pt};
 }
 
 void PersonalFirewall::dissect_ipv4_header(

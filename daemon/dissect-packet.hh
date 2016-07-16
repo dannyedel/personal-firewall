@@ -4,10 +4,11 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <vector>
 #include "netfilter-queue-library.hh"
+#include "packet.hh"
 
 namespace PersonalFirewall{
 
-boost::property_tree::ptree dissect_packet(nfq_data*);
+const Packet dissect_packet(nfq_data*);
 
 void dissect_ipv4_header(boost::property_tree::ptree&, pkt_buff*, iphdr*);
 void dissect_ipv6_header(boost::property_tree::ptree&, pkt_buff*, ip6_hdr*);

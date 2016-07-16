@@ -25,12 +25,10 @@ int callback(
 	void* /* unused data */) {
 	printf("callback() received a packet\n");
 
-	/** FIXME: Dissect packet to property tree **/
-
-	ptree pt = dissect_packet(nfa);
+	Packet pt = dissect_packet(nfa);
 
 	clog << "Packet facts:" << endl << "=====" << endl;
-	write_info(clog, pt);
+	write_info(clog, pt.facts);
 	clog << "=====" << endl;
 
 	/** FIXME DEBUG: Print property tree **/
@@ -42,7 +40,7 @@ int callback(
 	/** FIXME: Set verdict **/
 
 	int verdict = NF_ACCEPT;
-	int id = pt.get<int>("packetid");
+	int id = pt.facts.get<int>("packetid");
 	printf("Setting verdict ACCEPT for id %d\n",id);
 	nfq_set_verdict(qh, id, verdict, 0, nullptr);
 	return 0;
