@@ -270,7 +270,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		throw InvalidDirection(direction );
 	}
 
-	const string commandline = "/bin/fuser "+portnumber+"/"+protocolname;
+	const string commandline = "/bin/fuser "+portnumber+"/"+protocolname+" 2>/dev/null";
 
 	/// FIXME use popen
 
