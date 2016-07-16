@@ -19,13 +19,25 @@ using namespace boost::property_tree;
 using namespace PersonalFirewall;
 
 int callback(
-	nfq_q_handle* qh,
+	nfq_q_handle* /* unused queue handle */,
 	nfgenmsg* /* unused nfmsg */,
 	nfq_data* nfa,
-	void* /* unused data */) {
-	printf("callback() received a packet\n");
+	void* pq/* pointer to the packet queue */) {
+	PacketQueue& packetqueue = *(reinterpret_cast<PacketQueue*>(pq));
+
+	printf("Plain C callback() received a packet\n");
 
 	Packet pt = dissect_packet(nfa);
+
+	packetqueue.write(move(pt));
+
+	printf("Plain C callback() done");
+
+	return 0; // plain c: "Keep Going, send more packets"
+}
+
+#if 0
+{
 
 	clog << "Packet facts:" << endl << "=====" << endl;
 	write_info(clog, pt.facts);
@@ -43,3 +55,5 @@ int callback(
 	nfq_set_verdict(qh, id, verdict, 0, nullptr);
 	return 0;
 }
+
+#endif

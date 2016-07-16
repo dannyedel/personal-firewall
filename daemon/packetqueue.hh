@@ -15,6 +15,9 @@ class Queue{
 public:
 	T read();
 	void write(T&&);
+
+	// This class is not allowed to be copied
+	Queue& operator = (const Queue&) =delete;
 private:
 	std::mutex m_mutex;
 	std::condition_variable m_cond;

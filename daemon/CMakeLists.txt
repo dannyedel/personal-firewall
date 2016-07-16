@@ -8,6 +8,7 @@ set(persfw_sources
 	main
 	netfilter-callback
 	dissect-packet
+	verdict
 )
 
 add_definitions(-Wall -Wextra -Werror)

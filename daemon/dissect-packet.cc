@@ -19,6 +19,7 @@
 using namespace std;
 using namespace boost::property_tree;
 using namespace boost::iostreams;
+using namespace PersonalFirewall;
 
 namespace{
 	/** Look up the DNS Hostnames of packets regardless of
@@ -166,7 +167,10 @@ const Packet PersonalFirewall::dissect_packet(nfq_data* nfa) {
 		dissect_ipv6_header(pt, pbuf.get(), iph);
 	}
 
-	return Packet{pt};
+	ptree metadata;
+	metadata.put("hostnamelookupdone", false);
+
+	return Packet{pt, metadata};
 }
 
 void PersonalFirewall::dissect_ipv4_header(

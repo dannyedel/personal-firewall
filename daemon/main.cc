@@ -1,12 +1,56 @@
 #include "netfilter-queue-library.hh"
 #include "netfilter-callback.hh"
+#include "packetqueue.hh"
 
 #include <cstdio> // perror
 #include <cstdlib> // exit
 
+#include <iostream> // clog
+
+#include <boost/property_tree/info_parser.hpp>
+
+#include "dissect-packet.hh"
+
 using namespace std;
+using namespace PersonalFirewall;
+
+namespace {
+	PacketQueue packetqueue;
+
+	const bool alwaysLookup=true;
+
+	nfq_q_handle* qh;
+
+}
+
+void PacketHandlingFunction() {
+	Packet p = packetqueue.read();
+	
+	/** FIXME: Apply rules */
+
+	/** DNS Lookup
+	 *
+	 * Looks up if we still need a verdict or alwaysLookup is true
+	 */
+	if ( ! p.metadata.get<bool>("hostnamelookupdone")
+		&& ( p.verdict == Verdict::undecided || alwaysLookup )
+		) {
+		clog << "Packet needing DNS lookup received, re-injecting" << endl
+			<< "facts:" << endl;
+		write_info(clog, p.facts);
+		clog << endl;
+		lookup_and_reinject(move(p), packetqueue);
+		return;
+	}
+
+	int verdict = to_netfilter_int(p.verdict);
+	int id = p.facts.get<int>("packetid");
+	clog << "Setting verdict " << to_string(p.verdict) << " for ID " << id << endl;
+	nfq_set_verdict(qh, id, verdict, 0, nullptr);
+};
 
 int main() {
+
 	/** FIXME: Handle command-line-options **/
 
 	/** FIXME: Add iptables rules **/
@@ -31,7 +75,7 @@ int main() {
 		exit(1);
 	}
 
-	nfq_q_handle* qh=nfq_create_queue(h, 0, callback, nullptr);
+	qh=nfq_create_queue(h, 0, callback, &packetqueue);
 	{
 		int rc = nfq_set_mode(qh, NFQNL_COPY_PACKET, 65531);
 		if ( rc ) {
