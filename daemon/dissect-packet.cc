@@ -251,6 +251,14 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		return;
 	}
 	string portnumber;
+
+	// Socket owners are currently only supported for TCP and UDP
+	if ( protocolname != "tcp" && protocolname != "udp" )
+	{
+		clog << "Cannot get owner, unsupported protocol: "+protocolname << endl;
+		return;
+	}
+
 	if ( direction == "forward" ) {
 		// Cannot get socket owner for forward packets
 		return;
