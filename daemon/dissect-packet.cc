@@ -21,8 +21,11 @@ using namespace boost::property_tree;
 using namespace boost::iostreams;
 
 namespace{
-
-	const bool doDnsLookups=false;
+	/** Look up the DNS Hostnames of packets regardless of
+	 * whether a rule trying to match a hostname was encountered
+	 *
+	 * FIXME: Make this a command-line-switch */
+	const bool alwaysDoDnsLookups=false;
 
 struct LowlevelFailure: public runtime_error {
 	LowlevelFailure(const std::string& functionName):
@@ -208,7 +211,7 @@ void PersonalFirewall::dissect_ipv4_header(
 
 	/* Unless this is a DNS packet from or to this machine,
 	 * resolve all addresses involved */
-	if ( doDnsLookups && ! is_dns_packet(pt)) {
+	if ( alwaysDoDnsLookups && ! is_dns_packet(pt)) {
 		try {
 			pt.put("sourcehostname", dns_reverse_lookup( pt.get<string>("source") ) );
 		} catch( ReverseLookupFailed& e) {
