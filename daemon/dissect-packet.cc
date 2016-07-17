@@ -98,6 +98,31 @@ struct PopenDeleter {
 	}
 };
 
+struct ReadlinkFailed: public runtime_error {
+	string filename;
+	int errorcode;
+	ReadlinkFailed(const string& f, int e):
+		runtime_error(string("readlink(")+f+") failed: "+strerror(e)),
+		filename(f),
+		errorcode(e)
+	{
+	}
+};
+
+string readlink_str(const string& param) {
+	const unsigned bufsize=4096;
+	vector<char> link_target_buf(bufsize);
+	ssize_t textsize = readlink(
+		param.c_str(),
+		link_target_buf.data(),
+		bufsize);
+	if ( textsize < 0 ) {
+		throw ReadlinkFailed(param, errno);
+	}
+	link_target_buf.at(textsize)='\0';
+	return string(link_target_buf.data());
+}
+
 } // end anon namespace
 
 /** Determine whether the packet described by pt is a
