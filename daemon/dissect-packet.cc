@@ -220,25 +220,6 @@ void PersonalFirewall::dissect_ipv4_header(
 	}
 
 	get_socket_owner_program(pt);
-
-	/* Unless this is a DNS packet from or to this machine,
-	 * resolve all addresses involved */
-	if ( alwaysDoDnsLookups && ! is_dns_packet(pt)) {
-		try {
-			pt.put("sourcehostname", dns_reverse_lookup( pt.get<string>("source") ) );
-		} catch( ReverseLookupFailed& e) {
-			BOOST_LOG_TRIVIAL(warning) << e.what();
-		} catch( ForwardLookupMismatch&e ) {
-			BOOST_LOG_TRIVIAL(warning) << e.what();
-		}
-		try {
-			pt.put("destinationhostname", dns_reverse_lookup( pt.get<string>("destination") ));
-		} catch( ReverseLookupFailed&e ) {
-			BOOST_LOG_TRIVIAL(warning) << e.what();
-		} catch( ForwardLookupMismatch&e) {
-			BOOST_LOG_TRIVIAL(warning) << e.what();
-		}
-	}
 }
 
 void PersonalFirewall::dissect_tcp_header(ptree& pt, pkt_buff* pktb) {
