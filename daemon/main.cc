@@ -89,7 +89,7 @@ int main() {
 		exit(1);
 	}
 
-	BOOST_LOG_TRIVIAL(debug) << "binding nfnetlink_queue as nf_queue handler for AF_INET";
+	BOOST_LOG_TRIVIAL(trace) << "binding nfnetlink_queue as nf_queue handler for AF_INET";
 	{ 
 		int rc = nfq_bind_pf(h, AF_INET) < 0;
 		if ( rc < 0 ) {
@@ -99,6 +99,11 @@ int main() {
 	}
 
 	qh=nfq_create_queue(h, 0, callback, &packetqueue);
+	if ( !qh ) {
+		BOOST_LOG_TRIVIAL(fatal) << "Got a null queue_handle!  Please make sure that (a) you are root and (b) no other process is already using the queue.";
+		exit(4);
+	}
+
 	{
 		int rc = nfq_set_mode(qh, NFQNL_COPY_PACKET, 65531);
 		if ( rc ) {
@@ -113,15 +118,12 @@ int main() {
 			exit(3);
 		}
 	}
-	if ( !qh ) {
-		BOOST_LOG_TRIVIAL(fatal) << "Got a null queue_handle";
-		exit(4);
-	}
-	BOOST_LOG_TRIVIAL(trace) << "queue handle: " << qh;
+	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE queue_handle: " << qh;
 	int fd= nfq_fd(h);
+	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE file descriptor: " << fd;
 	for(;;)
 	{
-		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd";
+		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd " << fd;
 		int rv;
 		char buf[4096];
 		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
