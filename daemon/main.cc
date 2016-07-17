@@ -2,7 +2,6 @@
 #include "netfilter-callback.hh"
 #include "packetqueue.hh"
 
-#include <cstdio> // perror
 #include <cstdlib> // exit
 
 #include <boost/log/trivial.hpp>
@@ -86,7 +85,7 @@ int main() {
 
 	nfq_handle* h=nfq_open();
 	if (!h) {
-		perror("nfq_open");
+		BOOST_LOG_TRIVIAL(fatal) << "nfq_open() returned null pointer";
 		exit(1);
 	}
 
