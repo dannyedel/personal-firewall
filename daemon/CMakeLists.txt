@@ -23,7 +23,7 @@ target_link_libraries(personal-firewalld
 	PRIVATE
 		${NFQUEUE_LIBRARIES}
 		${Boost_LIBRARIES}
-		pthread
+		${Thread_LIBRARIES}
 )
 
 include_directories(SYSTEM ${NFQUEUE_INCLUDE_DIRS})
