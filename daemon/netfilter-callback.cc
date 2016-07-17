@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <cstdio> // printf
 #include <memory>
 #include <vector>
 #include <arpa/inet.h>
