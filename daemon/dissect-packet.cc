@@ -7,7 +7,7 @@
 #include <linux/ip.h> // ip_hdr
 #include <netinet/ip6.h> // ip6_hdr
 #include <netdb.h> //protoinfo
-#include <iostream> // clog
+#include <boost/log/trivial.hpp>
 #include <linux/tcp.h> // tcphdr
 #include <linux/udp.h> // udphdr
 #include <sys/types.h> // getpwuid_r
@@ -76,7 +76,7 @@ struct PopenDeleter {
 	void operator() ( FILE* p) {
 		int rc = pclose(p);
 		if ( 0 != rc )
-			clog << "pclose() returned "<< rc << endl;
+			BOOST_LOG_TRIVIAL(warning) << "pclose() returned "<< rc;
 	}
 };
 
@@ -205,7 +205,7 @@ void PersonalFirewall::dissect_ipv4_header(
 	if ( protoinfo ) {
 		pt.put("layer4protocol", protoinfo->p_name);
 	} else {
-		clog << "Unknown protocol number: " << iph->protocol << endl;
+		BOOST_LOG_TRIVIAL(warning) << "Unknown IP protocol number: " << iph->protocol;
 	}
 
 	if ( 0 != nfq_ip_set_transport_header(pktb, iph) )
@@ -227,16 +227,16 @@ void PersonalFirewall::dissect_ipv4_header(
 		try {
 			pt.put("sourcehostname", dns_reverse_lookup( pt.get<string>("source") ) );
 		} catch( ReverseLookupFailed& e) {
-			clog << e.what() << endl;
+			BOOST_LOG_TRIVIAL(warning) << e.what();
 		} catch( ForwardLookupMismatch&e ) {
-			clog << e.what() << endl;
+			BOOST_LOG_TRIVIAL(warning) << e.what();
 		}
 		try {
 			pt.put("destinationhostname", dns_reverse_lookup( pt.get<string>("destination") ));
 		} catch( ReverseLookupFailed&e ) {
-			clog << e.what() << endl;
+			BOOST_LOG_TRIVIAL(warning) << e.what();
 		} catch( ForwardLookupMismatch&e) {
-			clog << e.what() << endl;
+			BOOST_LOG_TRIVIAL(warning) << e.what();
 		}
 	}
 }
@@ -262,7 +262,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 	const string direction = pt.get<string>("direction");
 	const string protocolname = pt.get<string>("layer4protocol");
 	if ( protocolname.empty() ) {
-		clog << "No protocol name, cannot get socket owner" << endl;
+		BOOST_LOG_TRIVIAL(debug) << "No protocol name, cannot get socket owner";
 		return;
 	}
 	string portnumber;
@@ -270,7 +270,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 	// Socket owners are currently only supported for TCP and UDP
 	if ( protocolname != "tcp" && protocolname != "udp" )
 	{
-		clog << "Cannot get owner, unsupported protocol: "+protocolname << endl;
+		BOOST_LOG_TRIVIAL(debug) << "Cannot get owner, unsupported protocol: "+protocolname;
 		return;
 	}
 
@@ -291,7 +291,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 	unique_ptr<FILE, PopenDeleter> p { popen(commandline.c_str(), "r") };
 	if ( ! p ) {
-		clog << "Cannot call " +commandline << endl;
+		BOOST_LOG_TRIVIAL(warning) << "Cannot call " << commandline << ", got null pointer from popen()";
 		return;
 	}
 
@@ -312,12 +312,13 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 	{
 		// get executable name
 		vector<char> exename(4096);
+		const string exepath = procpath+"/exe";
 		ssize_t size = readlink(
-			(procpath+"/exe").c_str(),
+			exepath.c_str(),
 			exename.data(),
 			4096);
 		if ( size < 0 ) {
-			perror("readlink");
+			BOOST_LOG_TRIVIAL(warning) << "readlink() failed on " << exepath << ": " << strerror(errno);
 		} else if ( size < 4096 ) {
 			exename.at(size)='\0';
 			pt.put("binary", exename.data());
@@ -336,7 +337,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		int rc = stat( procpath.c_str(), &stats);
 		if ( rc != 0 )
 		{
-			perror("stat binary");
+			BOOST_LOG_TRIVIAL(warning) << "stat() failed on " << procpath << ": " << strerror(errno);
 		} else {
 			pt.put("uid", stats.st_uid);
 			pt.put("gid", stats.st_gid);
@@ -351,7 +352,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		int rc = getpwuid_r(uid, &pwd_entry, buf.data(), buf.size(), &pwd_result);
 		if ( rc != 0 )
 		{
-			perror("getpwuid_r");
+			BOOST_LOG_TRIVIAL(warning) << "getpwuid_r() failed: " << strerror(errno);
 		}
 		else
 		{
@@ -362,7 +363,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 
 	} catch( ptree_bad_path& e ) {
-		clog << "Could not figure out socket owner: Bad path: " << e.what() << endl;
+		BOOST_LOG_TRIVIAL(warning) << "Could not figure out socket owner: Bad path: " << e.what() << endl;
 	}
 }
 
@@ -445,8 +446,8 @@ string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 
 	if ( rc != 0 )
 	{
-		clog << "getnameinfo returned error " << rc <<": " << gai_strerror(rc) <<
-			" while trying to resolve " << ipaddress << endl;
+		BOOST_LOG_TRIVIAL(warning) << "getnameinfo returned error " << rc <<": " << gai_strerror(rc) <<
+			" while trying to resolve " << ipaddress;
 		throw ReverseLookupFailed(ipaddress);
 	}
 
@@ -461,16 +462,16 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 	// resolve without lock
 	lock.unlock();
 
-	clog << "Thread " << this_thread::get_id() << " resolving " << addr << " as " << to << endl;
+	BOOST_LOG_TRIVIAL(debug) << "resolving " << addr << " as " << to << endl;
 	// this blocks
 	try {
 		std::string hostname = dns_reverse_lookup(addr);
-		clog << "Thread " << this_thread::get_id() << " resolved " << addr << " as " << hostname << " and writing back to " << to << endl;
+		BOOST_LOG_TRIVIAL(debug) << "resolved " << addr << " as " << hostname << " and writing back to " << to;
 	
 		lock.lock();
 		packet.facts.put(to, hostname);
 	} catch( ReverseLookupFailed& e) {
-		clog << e.what() << endl;
+		BOOST_LOG_TRIVIAL(warning) << e.what();
 		lock.lock();
 		packet.metadata.add("hostnamelookup.failed", to);
 	}
@@ -482,7 +483,7 @@ void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queu
 	// Create a mutex to protect access to the packet
 	mutex m;
 
-	clog << "Thread " << this_thread::get_id() << " starting resolves" << endl;
+	BOOST_LOG_TRIVIAL(debug) << "starting DNS resolves for packet " << p.id();
 
 	// Lookup source hostname locally, lookup
 	// destination hostname in thread
@@ -494,7 +495,7 @@ void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queu
 
 	p.metadata.put("hostnamelookupdone", true);
 
-	clog << "Thread " << this_thread::get_id() << " completed resolving of packet" << endl;
+	BOOST_LOG_TRIVIAL(debug) << "completed DNS resolving of packet " << p.id();
 
 	queue.write(move(p));
 }
