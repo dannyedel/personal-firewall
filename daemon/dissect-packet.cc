@@ -475,12 +475,13 @@ void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queu
 
 	clog << "Thread " << this_thread::get_id() << " starting resolves" << endl;
 
-	// Spawn two threads -- source and destination hostname lookup
-	thread src(lookupAndWrite, ref(p), ref(m), "source", "sourcehostname");
+	// Lookup source hostname locally, lookup
+	// destination hostname in thread
 	thread dst(lookupAndWrite, ref(p), ref(m), "destination", "destinationhostname");
+	lookupAndWrite( p, m, "source", "sourcehostname");
 	// Lookups are now running in paralell
-	src.join();
 	dst.join();
+	// Both lookups are complete now
 
 	p.metadata.put("hostnamelookupdone", true);
 
