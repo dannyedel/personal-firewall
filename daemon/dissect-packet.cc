@@ -127,8 +127,25 @@ string readlink_str(const string& param) {
 
 /** Determine whether the packet described by pt is a
  * dns packet, to break loops when resolving hostnames
+ *
+ * update:  This should only match dns packets generated
+ * by *this process*
  * */
 bool PersonalFirewall::is_dns_packet(const ptree& pt) {
+	try {
+		/* Check if the packet is from our process ID */
+		const string ourPID = readlink_str("/proc/self");
+		if ( ourPID != pt.get<string>("pid") )
+		{
+			/* The packet is not from us
+			 * doesnt matter if it does to port 53
+			 */
+			return false;
+		}
+	} catch( exception& e ) {
+		BOOST_LOG_TRIVIAL(warning) << "Cannot check if packet is from us: " << e.what();
+	}
+
 	/* DNS happens via UDP */
 	if ( pt.get<string>("layer4protocol") != "udp" )
 		return false;
