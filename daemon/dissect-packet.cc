@@ -354,16 +354,7 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		// get executable name
 		vector<char> exename(4096);
 		const string exepath = procpath+"/exe";
-		ssize_t size = readlink(
-			exepath.c_str(),
-			exename.data(),
-			4096);
-		if ( size < 0 ) {
-			BOOST_LOG_TRIVIAL(warning) << "readlink() failed on " << exepath << ": " << strerror(errno);
-		} else if ( size < 4096 ) {
-			exename.at(size)='\0';
-			pt.put("binary", exename.data());
-		}
+		pt.put("binary", readlink_str(exepath));
 		ifstream cmdline{ procpath+"/cmdline" };
 		string buf;
 		getline(cmdline, buf, '\0' );
