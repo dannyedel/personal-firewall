@@ -5,7 +5,7 @@
 #include <cstdio> // perror
 #include <cstdlib> // exit
 
-#include <iostream> // clog
+#include <boost/log/trivial.hpp>
 
 #include <boost/property_tree/info_parser.hpp>
 
@@ -28,9 +28,9 @@ namespace {
 void PacketHandlingFunction() {
 	for(;;) {
 		try {
-	clog << "PacketHandlingFunction(): blocking on the queue" << endl;
-	Packet p = packetqueue.read();
-	clog << "PacketHandlingFunction() got a packet" << endl;
+			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction(): blocking on the queue";
+			Packet p = packetqueue.read();
+			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction() got a packet";
 	
 	/** FIXME: Apply rules */
 
@@ -44,20 +44,19 @@ void PacketHandlingFunction() {
 		&& ( p.verdict == Verdict::undecided || alwaysLookup )
 	   ) {
 		if ( is_dns_packet(p.facts) ) {
-			clog << "Packet is a DNS packet, not looking it up" << endl;
+			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " is a DNS packet, not looking it up";
 		} else {
-			clog << "Packet needing DNS lookup received, re-injecting" << endl;
+			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup";
 			thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
 			injectThread.detach();
 			continue;
 		}
 	}
 
-	clog << "Packet recived. facts:" << endl;
-	write_info(clog, p.facts);
-	clog << endl;
+	BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
 
 	if ( p.verdict == Verdict::undecided ) {
+		BOOST_LOG_TRIVIAL(debug) << "Undecided, setting accept on " << p.id();
 		nfq_set_verdict(qh,
 			p.facts.get<int>("packetid"),
 			to_netfilter_int(Verdict::accept),
@@ -68,10 +67,10 @@ void PacketHandlingFunction() {
 
 	int verdict = to_netfilter_int(p.verdict);
 	int id = p.facts.get<int>("packetid");
-	clog << "Setting verdict " << to_string(p.verdict) << " for ID " << id << endl;
+	BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(p.verdict) << " for packet " << p.id();
 	nfq_set_verdict(qh, id, verdict, 0, nullptr);
 		} catch( ShutdownException& e) {
-			clog << e.what() << endl;
+			BOOST_LOG_TRIVIAL(debug) << e.what();
 			return;
 		}
 	}
