@@ -469,6 +469,64 @@ namespace {
 	}
 }
 
+string to_string(addrinfo& ad) {
+	if ( ad.ai_canonname ) {
+		BOOST_LOG_TRIVIAL(trace) << "canon name: " << ad.ai_canonname;
+	}
+	vector<char> buffer(1024);
+	/** Address of a sin_addr or sin6_addr field inside an ai_addr structure.
+	 * No danger of getting any & * -> combination wrong here.
+	 */
+	void * whatcouldpossiblygowrong = nullptr;
+	if ( ad.ai_family == AF_INET ) {
+		whatcouldpossiblygowrong = & reinterpret_cast<sockaddr_in*>(ad.ai_addr)->sin_addr;
+	} else if ( ad.ai_family == AF_INET6 ) {
+		whatcouldpossiblygowrong = & reinterpret_cast<sockaddr_in6*>(ad.ai_addr)->sin6_addr;
+	} else {
+		BOOST_LOG_TRIVIAL(error) << "Unsupported address family: " << ad.ai_family;
+		throw LowlevelFailure("Unsupported AF_SOMETHING");
+	}
+
+	if ( ! inet_ntop( ad.ai_family, whatcouldpossiblygowrong, buffer.data(), 1024) ) {
+		BOOST_LOG_TRIVIAL(warning) << "inet_pton failed (AF_INET): " << strerror(errno);
+		throw LowlevelFailure("inet_pton");
+	}
+
+	return string{buffer.data()};
+}
+
+vector<string> PersonalFirewall::dns_forward_lookup( const string& hostname) {
+	vector<string> result;
+	BOOST_LOG_TRIVIAL(debug) << "attempting forward lookup: " << hostname;
+	struct addrinfo_result{
+		addrinfo* p = nullptr;
+		~addrinfo_result() {
+			freeaddrinfo(p);
+		}
+	} gairesult;
+	addrinfo hints;
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_protocol = 0;
+	hints.ai_flags = (AI_PASSIVE);
+	int rc = getaddrinfo(
+		hostname.c_str() /* node */,
+		nullptr /* service */,
+		&hints /* hints */,
+		&gairesult.p /* address of pointer to result */);
+	if ( rc != 0 ) {
+		BOOST_LOG_TRIVIAL(warning) << "getaddrinfo returned error " << rc << ": "
+			<< gai_strerror(rc) << " while resolving " << hostname;
+		return result;
+	}
+	BOOST_LOG_TRIVIAL(trace) << "getaddrinfo() returned " << rc;
+	for( addrinfo* ptr=gairesult.p ; ptr != nullptr ; ptr = ptr->ai_next ) {
+		BOOST_LOG_TRIVIAL(debug) << "Forward lookup for " << hostname << ": " << to_string(*ptr);
+		result.emplace_back( to_string( *ptr ) );
+	}
+	return result;
+}
+
 string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 	auto p = to_sockaddr(ipaddress);
 
@@ -483,7 +541,22 @@ string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 		throw ReverseLookupFailed(ipaddress);
 	}
 
-	return string(buf.data());
+	const string reverseFqdn{ buf.data()};
+
+	BOOST_LOG_TRIVIAL(trace) << "Got reverse lookup: " << ipaddress << " => " << reverseFqdn << ", checking forward";
+
+	// fetch all addresses for the proposed hostname
+	vector<string> addresses = dns_forward_lookup( reverseFqdn );
+
+	for( const auto& ad: addresses ) {
+		// the address also resolves forward. success!
+		if ( ad == ipaddress ) {
+			return reverseFqdn;
+		}
+	}
+
+	// PTR <=> A/AAAA mismatch!
+	throw ForwardLookupMismatch( ipaddress, reverseFqdn, addresses);
 }
 
 void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, const std::string& to) {
@@ -503,7 +576,7 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 	
 		lock.lock();
 		packet.facts.put(to, hostname);
-	} catch( ReverseLookupFailed& e) {
+	} catch( exception& e) {
 		BOOST_LOG_TRIVIAL(warning) << e.what();
 		lock.lock();
 		packet.metadata.add("hostnamelookup.failed", to);
