@@ -17,6 +17,7 @@
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <thread> // std::thread
 #include <functional> // std::ref
+#include <chrono>
 
 using namespace std;
 using namespace boost::property_tree;
@@ -24,11 +25,28 @@ using namespace boost::iostreams;
 using namespace PersonalFirewall;
 
 namespace{
-	/** Look up the DNS Hostnames of packets regardless of
-	 * whether a rule trying to match a hostname was encountered
-	 *
-	 * FIXME: Make this a command-line-switch */
-	const bool alwaysDoDnsLookups=false;
+
+	/** FIXME: make class variables */
+
+	void updateDnsTiming(double seconds) {
+		static mutex m;
+		unique_lock<mutex> lock(m);
+		static unsigned numberRequests=0;
+		static double totalTime;
+		static double bestTime = seconds;
+		static double worstTime = seconds;
+		numberRequests+=1;
+		totalTime+=seconds;
+		if ( seconds < bestTime ) {
+			bestTime = seconds;
+		}
+		if ( seconds > worstTime ) {
+			worstTime = seconds;
+		}
+		BOOST_LOG_TRIVIAL(info) << "DNS lookup took " << seconds << "s";
+		BOOST_LOG_TRIVIAL(info) << "Total time spent on DNS lookups: " << totalTime << "s for " << numberRequests << " hostname lookups";
+		BOOST_LOG_TRIVIAL(info) << "DNS lookup average: " << totalTime/numberRequests << "s, best: " << bestTime << "s, worst: " << worstTime << "s";
+	}
 
 struct LowlevelFailure: public runtime_error {
 	LowlevelFailure(const std::string& functionName):
@@ -445,6 +463,7 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 
 	BOOST_LOG_TRIVIAL(debug) << "resolving " << addr << " as " << to << endl;
 	// this blocks
+	auto start = chrono::steady_clock::now();
 	try {
 		std::string hostname = dns_reverse_lookup(addr);
 		BOOST_LOG_TRIVIAL(debug) << "resolved " << addr << " as " << hostname << " and writing back to " << to;
@@ -456,6 +475,9 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 		lock.lock();
 		packet.metadata.add("hostnamelookup.failed", to);
 	}
+	auto end = chrono::steady_clock::now();
+	chrono::duration<double> time = end-start;
+	updateDnsTiming(time.count());
 }
 
 void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queue) {
