@@ -90,48 +90,46 @@ int main() {
 		exit(1);
 	}
 
-/*
-	printf("unbinding existing nf_queue handler for AF_INET (if any)\n");
-	if (nfq_unbind_pf(h, AF_INET) < 0) {
-		fprintf(stderr, "error during nfq_unbind_pf()\n");
-		exit(1);
-	}
-*/
-
-	printf("binding nfnetlink_queue as nf_queue handler for AF_INET\n");
-	if (nfq_bind_pf(h, AF_INET) < 0) {
-		fprintf(stderr, "error during nfq_bind_pf()\n");
-		exit(1);
+	BOOST_LOG_TRIVIAL(debug) << "binding nfnetlink_queue as nf_queue handler for AF_INET";
+	{ 
+		int rc = nfq_bind_pf(h, AF_INET) < 0;
+		if ( rc < 0 ) {
+			BOOST_LOG_TRIVIAL(fatal) << "error " << rc << " during nfq_bind_pf()";
+			exit(1);
+		}
 	}
 
 	qh=nfq_create_queue(h, 0, callback, &packetqueue);
 	{
 		int rc = nfq_set_mode(qh, NFQNL_COPY_PACKET, 65531);
 		if ( rc ) {
-			perror("nfq_set_mode");
+			BOOST_LOG_TRIVIAL(fatal) << "error " << rc << " during nfq_set_mode()";
+			exit(2);
 		}
 	}
 	{
 		int rc = nfq_set_queue_maxlen(qh, /* 10M */ 10*1024*1024 );
 		if ( rc ) {
-			perror("nfq_set_queue_maxlen");
+			BOOST_LOG_TRIVIAL(fatal) << "error " << rc << " during nfq_set_queue_maxlen";
+			exit(3);
 		}
 	}
 	if ( !qh ) {
-		perror("nfq_q_handle");
+		BOOST_LOG_TRIVIAL(fatal) << "Got a null queue_handle";
+		exit(4);
 	}
-	printf("qh: %p\n",  qh );
+	BOOST_LOG_TRIVIAL(trace) << "queue handle: " << qh;
 	int fd= nfq_fd(h);
 	for(;;)
 	{
-		printf("Waiting for packet\n");
+		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd";
 		int rv;
 		char buf[4096];
 		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
-			printf("Got some\n");
+			BOOST_LOG_TRIVIAL(trace) << "recv()'d something";
 			nfq_handle_packet(h, buf, rv); /* send packet to callback */
 		} else {
-			printf("recv() returned %d\n", rv);
+			BOOST_LOG_TRIVIAL(warning) << "recv() returned " << rv << ", ignoring";
 		}
 	}
 
