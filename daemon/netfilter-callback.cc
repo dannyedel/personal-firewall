@@ -31,7 +31,7 @@ int callback(
 
 	packetqueue.write(move(pt));
 
-	printf("Plain C callback() done");
+	printf("Plain C callback() done\n");
 
 	return 0; // plain c: "Keep Going, send more packets"
 }

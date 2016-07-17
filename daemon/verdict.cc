@@ -6,14 +6,14 @@
 using namespace PersonalFirewall;
 using namespace std;
 
-int to_netfilter_int(const Verdict& v) {
+int PersonalFirewall::to_netfilter_int(const Verdict& v) {
 	if ( v == Verdict::accept ) {
 		return NF_ACCEPT;
 	}
 	return NF_DROP;
 }
 
-std::string to_string(const Verdict& v) {
+std::string PersonalFirewall::to_string(const Verdict& v) {
 	switch(v) {
 		case Verdict::accept:
 			return "accept";

@@ -11,6 +11,8 @@
 
 #include "dissect-packet.hh"
 
+#include <thread> // thread
+
 using namespace std;
 using namespace PersonalFirewall;
 
@@ -24,7 +26,11 @@ namespace {
 }
 
 void PacketHandlingFunction() {
+	for(;;) {
+		try {
+	clog << "PacketHandlingFunction(): blocking on the queue" << endl;
 	Packet p = packetqueue.read();
+	clog << "PacketHandlingFunction() got a packet" << endl;
 	
 	/** FIXME: Apply rules */
 
@@ -35,21 +41,39 @@ void PacketHandlingFunction() {
 	if ( ! p.metadata.get<bool>("hostnamelookupdone")
 		&& ( p.verdict == Verdict::undecided || alwaysLookup )
 		) {
-		clog << "Packet needing DNS lookup received, re-injecting" << endl
-			<< "facts:" << endl;
-		write_info(clog, p.facts);
-		clog << endl;
-		lookup_and_reinject(move(p), packetqueue);
-		return;
+		clog << "Packet needing DNS lookup received, re-injecting" << endl;
+		thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
+		injectThread.detach();
+		continue;
+	}
+
+	clog << "Packet recived. facts:" << endl;
+	write_info(clog, p.facts);
+	clog << endl;
+
+	if ( p.verdict == Verdict::undecided ) {
+		nfq_set_verdict(qh,
+			p.facts.get<int>("packetid"),
+			to_netfilter_int(Verdict::accept),
+			0,
+			nullptr);
+		continue;
 	}
 
 	int verdict = to_netfilter_int(p.verdict);
 	int id = p.facts.get<int>("packetid");
 	clog << "Setting verdict " << to_string(p.verdict) << " for ID " << id << endl;
 	nfq_set_verdict(qh, id, verdict, 0, nullptr);
+		} catch( ShutdownException& e) {
+			clog << e.what() << endl;
+			return;
+		}
+	}
 };
 
 int main() {
+
+	thread handlerThread( PacketHandlingFunction);
 
 	/** FIXME: Handle command-line-options **/
 
@@ -105,6 +129,8 @@ int main() {
 			printf("recv() returned %d\n", rv);
 		}
 	}
+
+	handlerThread.join();
 
 	return 0;
 }

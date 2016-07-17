@@ -15,6 +15,8 @@
 #include <sys/stat.h>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
+#include <thread> // std::thread
+#include <functional> // std::ref
 
 using namespace std;
 using namespace boost::property_tree;
@@ -296,7 +298,6 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 			string pid;
 			is >> pid;
 			pt.put("pid", pid);
-			clog << "PID:" << pid << endl;
 		}
 	}
 
@@ -443,4 +444,48 @@ string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 	return string(buf.data());
 }
 
+void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, const std::string& to) {
+	// Copy source address
+	unique_lock<mutex> lock(m);
+	std::string addr = packet.facts.get<string>(from);
+
+	// resolve without lock
+	lock.unlock();
+
+	clog << "Thread " << this_thread::get_id() << " resolving " << addr << " as " << to << endl;
+	// this blocks
+	try {
+		std::string hostname = dns_reverse_lookup(addr);
+		clog << "Thread " << this_thread::get_id() << " resolved " << addr << " as " << hostname << " and writing back to " << to << endl;
+	
+		lock.lock();
+		packet.facts.put(to, hostname);
+	} catch( ReverseLookupFailed& e) {
+		clog << e.what() << endl;
+		lock.lock();
+		packet.metadata.add("hostnamelookup.failed", to);
+	}
+}
+
+void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queue) {
+	// Move packet to thread-local storage
+	Packet p{oldPacket};
+	// Create a mutex to protect access to the packet
+	mutex m;
+
+	clog << "Thread " << this_thread::get_id() << " starting resolves" << endl;
+
+	// Spawn two threads -- source and destination hostname lookup
+	thread src(lookupAndWrite, ref(p), ref(m), "source", "sourcehostname");
+	thread dst(lookupAndWrite, ref(p), ref(m), "destination", "destinationhostname");
+	// Lookups are now running in paralell
+	src.join();
+	dst.join();
+
+	p.metadata.put("hostnamelookupdone", true);
+
+	clog << "Thread " << this_thread::get_id() << " completed resolving of packet" << endl;
+
+	queue.write(move(p));
+}
 
