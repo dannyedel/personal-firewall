@@ -37,14 +37,20 @@ void PacketHandlingFunction() {
 	/** DNS Lookup
 	 *
 	 * Looks up if we still need a verdict or alwaysLookup is true
+	 *
+	 * Never lookup DNS packets themselves
 	 */
 	if ( ! p.metadata.get<bool>("hostnamelookupdone")
 		&& ( p.verdict == Verdict::undecided || alwaysLookup )
-		) {
-		clog << "Packet needing DNS lookup received, re-injecting" << endl;
-		thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
-		injectThread.detach();
-		continue;
+	   ) {
+		if ( is_dns_packet(p.facts) ) {
+			clog << "Packet is a DNS packet, not looking it up" << endl;
+		} else {
+			clog << "Packet needing DNS lookup received, re-injecting" << endl;
+			thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
+			injectThread.detach();
+			continue;
+		}
 	}
 
 	clog << "Packet recived. facts:" << endl;

@@ -80,10 +80,12 @@ struct PopenDeleter {
 	}
 };
 
+} // end anon namespace
+
 /** Determine whether the packet described by pt is a
  * dns packet, to break loops when resolving hostnames
  * */
-bool is_dns_packet(const ptree& pt) {
+bool PersonalFirewall::is_dns_packet(const ptree& pt) {
 	/* DNS happens via UDP */
 	if ( pt.get<string>("layer4protocol") != "udp" )
 		return false;
@@ -95,21 +97,25 @@ bool is_dns_packet(const ptree& pt) {
 
 	/* Packet from a nameserver to us */
 	if ( pt.get<string>("direction") == "input" &&
-		pt.get<int>("sourceport") == 53 ) {
+		(
+		 pt.get<int>("sourceport") == 53
+		 || pt.get<int>("sourceport") == 5353
+		) ) {
 		return true;
 	}
 
 	/* Packet from us to a nameserver */
 	if ( pt.get<string>("direction") == "output" &&
-		pt.get<int>("destinationport") == 53 ) {
+		( pt.get<int>("destinationport") == 53
+		  || pt.get<int>("destinationport") == 5353
+		)
+		  ) {
 		return true;
 	}
 
 	/* Just a regular UDP packet. */
 	return false;
 }
-
-} // end anon namespace
 
 const Packet PersonalFirewall::dissect_packet(nfq_data* nfa) {
 	ptree pt;

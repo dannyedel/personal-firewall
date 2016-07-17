@@ -32,4 +32,6 @@ std::vector<std::string> dns_forward_lookup(const std::string& hostname);
  * */
 void lookup_and_reinject(Packet&&, PacketQueue&);
 
+bool is_dns_packet(const boost::property_tree::ptree& facts);
+
 }
