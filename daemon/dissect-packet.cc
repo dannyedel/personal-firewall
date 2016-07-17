@@ -390,17 +390,21 @@ void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*ip
 }
 
 namespace {
-	pair<struct sockaddr,socklen_t> const to_sockaddr(const string& ipaddress) {
-		pair<struct sockaddr, socklen_t> ret;
+	union sockaddr46 {
+		sockaddr_in v4;
+		sockaddr_in6 v6;
+	};
+
+	pair<sockaddr46,socklen_t> const to_sockaddr(const string& ipaddress) {
+		pair<sockaddr46, socklen_t> ret;
 		{
-			struct sockaddr_in& sock = reinterpret_cast<sockaddr_in&>( ret.first );
+			struct sockaddr_in& sock = ret.first.v4;
 			ret.second = sizeof( sockaddr_in );
 			sock.sin_family= AF_INET;
 			sock.sin_port = 0;
 			/* Try as IPv4 */
-			static_assert( sizeof(sockaddr_in) <= sizeof( sockaddr), "sockaddr too small for ipv4" );
+			static_assert( sizeof(sockaddr_in) <= sizeof( sockaddr46), "sockaddr too small for ipv4" );
 			ret.second = sizeof(sockaddr_in);
-			ret.first.sa_family = AF_INET;
 			int rc = inet_pton( AF_INET, ipaddress.c_str(), &sock.sin_addr );
 			if ( rc == 1 ) {
 				return ret;
@@ -409,13 +413,12 @@ namespace {
 
 		{
 			/* Try as IPv6 */
-			struct sockaddr_in6& sock = reinterpret_cast<sockaddr_in6&>( ret.first );
+			struct sockaddr_in6& sock = ret.first.v6;
 			ret.second = sizeof( sockaddr_in6 );
 			sock.sin6_family = AF_INET6;
 			sock.sin6_port = 0;
-			static_assert( sizeof(sockaddr_in) <= sizeof(sockaddr), "sockaddr too small for ipv6");
+			static_assert( sizeof(sockaddr_in6) <= sizeof(sockaddr46), "sockaddr too small for ipv6");
 			ret.second=sizeof(sockaddr_in6);
-			ret.first.sa_family = AF_INET6;
 			int rc = inet_pton( AF_INET6, ipaddress.c_str(), &sock.sin6_addr );
 			if ( rc == 1 ) {
 				return ret;
@@ -432,7 +435,7 @@ string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 
 	vector<char> buf(1024);
 
-	int rc = getnameinfo(&( p.first ), p.second, buf.data(), buf.size(), nullptr, 0, NI_NAMEREQD);
+	int rc = getnameinfo(reinterpret_cast<sockaddr*>( &( p.first )), p.second, buf.data(), buf.size(), nullptr, 0, NI_NAMEREQD);
 
 	if ( rc != 0 )
 	{
