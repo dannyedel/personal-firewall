@@ -7,12 +7,11 @@
 #include <linux/ip.h>
 #include <netdb.h> // protoinfo
 #include <netinet/ip6.h>
+#include <boost/log/trivial.hpp>
 
 #include "netfilter-callback.hh"
 
 #include "dissect-packet.hh"
-
-#include <iostream>
 
 using namespace std;
 using namespace boost::property_tree;
@@ -25,13 +24,15 @@ int callback(
 	void* pq/* pointer to the packet queue */) {
 	PacketQueue& packetqueue = *(reinterpret_cast<PacketQueue*>(pq));
 
-	printf("Plain C callback() received a packet\n");
+	BOOST_LOG_TRIVIAL(trace) << "Plain C callback() received a packet";
 
 	Packet pt = dissect_packet(nfa);
 
+	BOOST_LOG_TRIVIAL(trace) << "Plain C callback() writing packet " << pt.id() << " to queue";
+
 	packetqueue.write(move(pt));
 
-	printf("Plain C callback() done\n");
+	BOOST_LOG_TRIVIAL(trace) << "Plain C callback() done";
 
 	return 0; // plain c: "Keep Going, send more packets"
 }
