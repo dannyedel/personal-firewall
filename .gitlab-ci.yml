@@ -4,6 +4,7 @@ cache:
         - /var/lib/apt/lists
 
 build:
+    image: debian:stretch
     script:
         - sed -e 's|httpredir.debian.org/debian|mirror.hetzner.de/debian/packages|g'
           -i /etc/apt/sources.list
