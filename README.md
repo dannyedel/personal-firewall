@@ -28,3 +28,13 @@ To speed things up, we use the `nat` table, which only queues
 the first packet of each connection, instead of every single packet.
 While this removes the ability to stop already-opened connections,
 it massively reduces CPU load.
+
+## DNS lookups
+
+It is ***HIGHLY*** recommended to install `nscd` (the
+name-service-cache-daemon) to avoid massive slowdowns due to DNS
+resolving.
+
+If you have a recursive resolver ready, be sure to add it to the
+whitelist in `dissect-packet.cc` (this will be a command-line option
+soon™).
