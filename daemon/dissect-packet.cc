@@ -131,6 +131,17 @@ string readlink_str(const string& param) {
 	return string(link_target_buf.data());
 }
 
+/** FIXME: Make command line options
+ *
+ *  FIXME: must be alphabetically sorted
+ */
+
+vector<string> dnsWhitelistBinaries = {
+	"/usr/sbin/named",
+	"/usr/sbin/nscd",
+};
+
+
 } // end anon namespace
 
 /** Determine whether the packet described by pt is a
@@ -140,6 +151,17 @@ string readlink_str(const string& param) {
  * by *this process*
  * */
 bool PersonalFirewall::is_dns_packet(const ptree& pt) {
+	try {
+		if ( binary_search(
+			dnsWhitelistBinaries.cbegin(),
+			dnsWhitelistBinaries.cend(),
+			pt.get<string>("binary")) )
+		{
+			return true;
+		}
+	} catch( exception& e) {
+		BOOST_LOG_TRIVIAL(warning) << "Cannot check if packet is from a trusted binary: " << e.what();
+	}
 	try {
 		/* Check if the packet is from our process ID */
 		const string ourPID = readlink_str("/proc/self");
