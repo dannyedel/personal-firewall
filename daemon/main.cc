@@ -46,6 +46,7 @@ void PacketHandlingFunction() {
 			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " is a DNS packet, not looking it up";
 		} else {
 			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup";
+			BOOST_LOG_TRIVIAL(trace) << "Packet " << p.id() << ": " << p;
 			thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
 			injectThread.detach();
 			continue;
