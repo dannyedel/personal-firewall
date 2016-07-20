@@ -26,26 +26,34 @@ using namespace PersonalFirewall;
 
 namespace{
 
-	/** FIXME: make class variables */
-
-	void updateDnsTiming(double seconds) {
+	void updateDnsTiming(double secondsReverse, double secondsForward) {
 		static mutex m;
 		unique_lock<mutex> lock(m);
 		static unsigned numberRequests=0;
-		static double totalTime;
-		static double bestTime = seconds;
-		static double worstTime = seconds;
+		static double totalTimeR;
+		static double bestTimeR = secondsReverse;
+		static double worstTimeR = secondsReverse;
+		static double totalTimeF;
+		static double bestTimeF = secondsForward;
+		static double worstTimeF = secondsForward;
 		numberRequests+=1;
-		totalTime+=seconds;
-		if ( seconds < bestTime ) {
-			bestTime = seconds;
+		totalTimeR+=secondsReverse;
+		totalTimeF+=secondsForward;
+		if ( secondsReverse < bestTimeR ) {
+			bestTimeR = secondsReverse;
 		}
-		if ( seconds > worstTime ) {
-			worstTime = seconds;
+		if ( secondsForward < bestTimeF ) {
+			bestTimeF = secondsForward;
 		}
-		BOOST_LOG_TRIVIAL(info) << "DNS lookup took " << seconds << "s";
-		BOOST_LOG_TRIVIAL(info) << "Total time spent on DNS lookups: " << totalTime << "s for " << numberRequests << " hostname lookups";
-		BOOST_LOG_TRIVIAL(info) << "DNS lookup average: " << totalTime/numberRequests << "s, best: " << bestTime << "s, worst: " << worstTime << "s";
+		if ( secondsReverse > worstTimeR ) {
+			worstTimeR = secondsReverse;
+		}
+		if ( secondsForward > worstTimeF ) {
+			worstTimeF = secondsForward;
+		}
+		BOOST_LOG_TRIVIAL(info) << "DNS lookup took " << secondsReverse << "s + " << secondsForward << "s";
+		BOOST_LOG_TRIVIAL(info) << "Reverse: total: " << totalTimeR << ", best: " << bestTimeR << ", worst: " << worstTimeR << ", avg: " << totalTimeR/numberRequests ;
+		BOOST_LOG_TRIVIAL(info) << "Forward: total: " << totalTimeF << ", best: " << bestTimeF << ", worst: " << worstTimeF << ", avg: " << totalTimeF/numberRequests ;
 	}
 
 struct LowlevelFailure: public runtime_error {
@@ -545,18 +553,7 @@ string PersonalFirewall::dns_reverse_lookup(const string& ipaddress) {
 
 	BOOST_LOG_TRIVIAL(trace) << "Got reverse lookup: " << ipaddress << " => " << reverseFqdn << ", checking forward";
 
-	// fetch all addresses for the proposed hostname
-	vector<string> addresses = dns_forward_lookup( reverseFqdn );
-
-	for( const auto& ad: addresses ) {
-		// the address also resolves forward. success!
-		if ( ad == ipaddress ) {
-			return reverseFqdn;
-		}
-	}
-
-	// PTR <=> A/AAAA mismatch!
-	throw ForwardLookupMismatch( ipaddress, reverseFqdn, addresses);
+	return reverseFqdn;
 }
 
 void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, const std::string& to) {
@@ -570,8 +567,23 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 	BOOST_LOG_TRIVIAL(debug) << "resolving " << addr << " as " << to << endl;
 	// this blocks
 	auto start = chrono::steady_clock::now();
+	auto midpoint = start;
 	try {
 		std::string hostname = dns_reverse_lookup(addr);
+		midpoint = chrono::steady_clock::now();
+		vector<string> addresses = dns_forward_lookup( hostname );
+		bool found=false;
+		for( const auto& ad: addresses ) {
+			// the address also resolves forward. success!
+			if ( ad == addr ) {
+				BOOST_LOG_TRIVIAL(debug) << "Check okay, forward lookup of " << hostname << " contains " << ad ;
+				found=true;
+				break;
+			}
+		}
+		if ( !found ) {
+			throw ForwardLookupMismatch(addr, hostname, addresses);
+		}
 		BOOST_LOG_TRIVIAL(debug) << "resolved " << addr << " as " << hostname << " and writing back to " << to;
 	
 		lock.lock();
@@ -582,8 +594,9 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 		packet.metadata.add("hostnamelookup.failed", to);
 	}
 	auto end = chrono::steady_clock::now();
-	chrono::duration<double> time = end-start;
-	updateDnsTiming(time.count());
+	chrono::duration<double> timeR = midpoint-start;
+	chrono::duration<double> timeF = end-midpoint;
+	updateDnsTiming(timeR.count(), timeF.count());
 }
 
 void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queue) {
