@@ -25,6 +25,7 @@ namespace {
 }
 
 void PacketHandlingFunction() {
+	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
 		try {
 			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction(): blocking on the queue";
@@ -78,7 +79,6 @@ void PacketHandlingFunction() {
 
 int main() {
 
-	thread handlerThread( PacketHandlingFunction);
 
 	/** FIXME: Handle command-line-options **/
 
@@ -122,6 +122,8 @@ int main() {
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE queue_handle: " << qh;
 	int fd= nfq_fd(h);
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE file descriptor: " << fd;
+
+	thread handlerThread( PacketHandlingFunction);
 	for(;;)
 	{
 		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd " << fd;
