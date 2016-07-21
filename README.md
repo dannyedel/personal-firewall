@@ -38,3 +38,9 @@ resolving.
 If you have a recursive resolver ready, be sure to add it to the
 whitelist in `dissect-packet.cc` (this will be a command-line option
 soon™).
+
+## Known bugs and workarounds
+
+If you have a buggy DNS server and run into constant 5-second resolve
+times, try adding `options single-request` to `/etc/resolv.conf` (or
+`/etc/resolvconf/resolv.conf.d/tail`).
