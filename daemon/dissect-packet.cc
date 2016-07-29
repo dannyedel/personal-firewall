@@ -432,8 +432,8 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 
 
-	} catch( ptree_bad_path& e ) {
-		BOOST_LOG_TRIVIAL(warning) << "Could not figure out socket owner: Bad path: " << e.what() << endl;
+	} catch( exception& e ) {
+		BOOST_LOG_TRIVIAL(warning) << "Could not figure out socket owner: " << e.what() << endl;
 	}
 }
 
