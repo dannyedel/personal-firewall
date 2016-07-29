@@ -358,8 +358,6 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 
 	const string commandline = "/bin/fuser "+portnumber+"/"+protocolname+" 2>/dev/null";
 
-	/// FIXME use popen
-
 	unique_ptr<FILE, PopenDeleter> p { popen(commandline.c_str(), "r") };
 	if ( ! p ) {
 		BOOST_LOG_TRIVIAL(warning) << "Cannot call " << commandline << ", got null pointer from popen()";
