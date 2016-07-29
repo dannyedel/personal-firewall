@@ -52,8 +52,18 @@ namespace{
 			worstTimeF = secondsForward;
 		}
 		BOOST_LOG_TRIVIAL(info) << "DNS lookup took " << secondsReverse << "s + " << secondsForward << "s";
-		BOOST_LOG_TRIVIAL(info) << "Reverse: total: " << totalTimeR << ", best: " << bestTimeR << ", worst: " << worstTimeR << ", avg: " << totalTimeR/numberRequests ;
-		BOOST_LOG_TRIVIAL(info) << "Forward: total: " << totalTimeF << ", best: " << bestTimeF << ", worst: " << worstTimeF << ", avg: " << totalTimeF/numberRequests ;
+		BOOST_LOG_TRIVIAL(info) <<
+			"Reverse: total: " << totalTimeR <<
+			" over " << numberRequests << " requests" <<
+			", best: " << bestTimeR <<
+			", worst: " << worstTimeR <<
+			", avg: " << totalTimeR/numberRequests ;
+		BOOST_LOG_TRIVIAL(info) <<
+			"Forward: total: " << totalTimeF <<
+			" over " << numberRequests << " requests" <<
+			", best: " << bestTimeF <<
+			", worst: " << worstTimeF <<
+			", avg: " << totalTimeF/numberRequests ;
 	}
 
 struct LowlevelFailure: public runtime_error {
