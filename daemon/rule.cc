@@ -1,12 +1,94 @@
 #include "rule.hh"
 #include <vector>
+#include <boost/log/trivial.hpp>
 
 using namespace boost::property_tree;
 using namespace PersonalFirewall;
 using namespace std;
 
-bool Rule::matches(const Packet&) const {
-	return false;
+/** Keys that cannot be decided without DNS lookup */
+const vector<string> dnsKeys = {
+	"destinationhostname",
+	"hostname",
+	"hostnamematch",
+	"sourcehostname",
+};
+
+/** Keys that can match either the source- or destination- field */
+const vector<string> specialKeys = {
+	"address",
+	"hostname",
+	"port",
+};
+
+inline bool contains(const vector<string>& vec, const string& s) {
+	return binary_search(vec.cbegin(), vec.cend(), s);
+}
+
+bool Rule::matches(const Packet& p) const {
+	// Test given keys one by one to see if they match
+	for( const auto& pair: restrictions) {
+		// First check the simple keys
+		if ( ! contains(dnsKeys, pair.first)
+			&& ! contains(specialKeys, pair.first) ) {
+			try {
+				// If a key is not equal, its a fail
+				if ( pair.second.data() != p.facts.get<string>(pair.first) ) {
+					BOOST_LOG_TRIVIAL(trace) << "Failed on simple compare";
+					return false;
+				}
+			} catch( ptree_bad_path& e) {
+				// If a key does not exist, its a fail
+				BOOST_LOG_TRIVIAL(trace) << "Failed on nonexistent key " << pair.first;
+				return false;
+			}
+		}
+	}
+	// Check special non-dns keys
+	for( const auto& pair: restrictions ) {
+		if ( contains(specialKeys, pair.first) && ! contains(dnsKeys, pair.first) ) {
+			const string& data = pair.second.data();
+			if ( data != p.facts.get_optional<string>("source"+pair.first)
+				&& data != p.facts.get_optional<string>("destination"+pair.first) )
+			{
+				// The packet matches neither the source-
+				// nor the destination- version of the special key
+				BOOST_LOG_TRIVIAL(trace) << "Failed on special key " << pair.first;
+				return false;
+			}
+		}
+	}
+	
+	// Check DNS keys
+	for( const auto& pair: restrictions) {
+		const string& data= pair.second.data();
+		if ( contains(dnsKeys, pair.first) ) {
+			if ( p.metadata.get_optional<string>("hostnamelookupdone") != string("true") ) {
+				BOOST_LOG_TRIVIAL(trace) << "Need DNS resolve to check " << pair.first;
+				throw NeedDnsResolve();
+			}
+			// Check if this is a special dns key
+			if ( contains(specialKeys, pair.first) ) {
+				if ( data != p.facts.get_optional<string>("source"+pair.first)
+					&& data != p.facts.get_optional<string>("destination"+pair.first) )
+				{
+					BOOST_LOG_TRIVIAL(trace) << "Failed on special DNS key " << pair.first;
+					return false;
+				}
+			} else {
+				// DNS key, but not special key
+				if ( data != p.facts.get<string>( pair.first ) ) {
+					BOOST_LOG_TRIVIAL(trace) << "Failed on normal DNS key " << pair.first;
+					return false;
+				}
+			}
+		}
+	}
+
+	// All restrictions, if there were any,
+	// matched so far. The rule as a total matches.
+
+	return true;
 }
 
 /** Alphabetically sorted list of allowed rule matcher keys,

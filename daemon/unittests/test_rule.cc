@@ -12,7 +12,9 @@ BOOST_AUTO_TEST_CASE(throwOnDns) {
 	match.put("sourcehostname", "resolveme");
 
 	ptree facts;
+	facts.put("source", "10.1.1.1");
 	facts.put("source4", "10.1.1.1");
+	facts.put("destination", "10.2.2.2");
 	facts.put("destination4", "10.2.2.2");
 
 	Packet p{ facts };
