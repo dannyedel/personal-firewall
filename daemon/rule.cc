@@ -27,20 +27,17 @@ inline bool contains(const vector<string>& vec, const string& s) {
 }
 
 bool Rule::matches(const Packet& p) const {
+	try {
 	// Test given keys one by one to see if they match
 	for( const auto& pair: restrictions) {
 		// First check the simple keys
 		if ( ! contains(dnsKeys, pair.first)
 			&& ! contains(specialKeys, pair.first) ) {
-			try {
-				// If a key is not equal, its a fail
-				if ( pair.second.data() != p.facts.get<string>(pair.first) ) {
-					BOOST_LOG_TRIVIAL(trace) << "Failed on simple compare";
-					return false;
-				}
-			} catch( ptree_bad_path& e) {
-				// If a key does not exist, its a fail
-				BOOST_LOG_TRIVIAL(trace) << "Failed on nonexistent key " << pair.first;
+			// If a key is not equal, its a fail
+			if ( pair.second.data() != p.facts.get<string>(pair.first) ) {
+				BOOST_LOG_TRIVIAL(trace) << "Failed on simple compare ["
+					<< pair.first << "]: " << pair.second.data() <<
+					" vs " << p.facts.get<string>(pair.first);
 				return false;
 			}
 		}
@@ -49,12 +46,14 @@ bool Rule::matches(const Packet& p) const {
 	for( const auto& pair: restrictions ) {
 		if ( contains(specialKeys, pair.first) && ! contains(dnsKeys, pair.first) ) {
 			const string& data = pair.second.data();
-			if ( data != p.facts.get_optional<string>("source"+pair.first)
-				&& data != p.facts.get_optional<string>("destination"+pair.first) )
+			auto source = p.facts.get_optional<string>("source"+pair.first);
+			auto dest = p.facts.get_optional<string>("destination"+pair.first);
+			if ( data != source && data != dest )
 			{
 				// The packet matches neither the source-
 				// nor the destination- version of the special key
-				BOOST_LOG_TRIVIAL(trace) << "Failed on special key " << pair.first;
+				BOOST_LOG_TRIVIAL(trace) << "Failed on special [" << pair.first <<
+					"]: " << data << " vs. " << source << " => " << dest;
 				return false;
 			}
 		}
@@ -90,32 +89,38 @@ bool Rule::matches(const Packet& p) const {
 						matched=true;
 				}
 				if ( not matched ) {
-					if ( source )
-						BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
-						<< " vs " << *source;
-					if ( dest)
-						BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
-						<< " vs " << *dest;
+					BOOST_LOG_TRIVIAL(trace) << "Failed on special [hostnamematch]: " << data
+						<< " vs. " << source << " => " << dest;
 					return false;
 				}
 
 			}
 			// Check if this is a special dns key
 			else if ( contains(specialKeys, pair.first) ) {
-				if ( data != p.facts.get_optional<string>("source"+pair.first)
-					&& data != p.facts.get_optional<string>("destination"+pair.first) )
+				auto source = p.facts.get_optional<string>("source"+pair.first);
+				auto dest = p.facts.get_optional<string>("destination"+pair.first);
+				if ( data != source && data != dest )
 				{
-					BOOST_LOG_TRIVIAL(trace) << "Failed on special DNS key " << pair.first;
+					BOOST_LOG_TRIVIAL(trace) << "Failed on special DNS [" << pair.first
+						<< "]: " << data << "vs. " << source << " => " << dest;
 					return false;
 				}
 			} else {
 				// DNS key, but not special key
+				auto fact = p.facts.get<string>( pair.first );
 				if ( data != p.facts.get<string>( pair.first ) ) {
-					BOOST_LOG_TRIVIAL(trace) << "Failed on normal DNS key " << pair.first;
+					BOOST_LOG_TRIVIAL(trace) << "Failed on normal DNS key [" << pair.first
+						<< "]: " << data << " vs. " << fact;
 					return false;
 				}
 			}
 		}
+	}
+	} catch( ptree_bad_path& e) {
+		// If a key does not exist, its a fail
+		BOOST_LOG_TRIVIAL(trace) << "Failed on nonexistent key: " <<
+			e.what() ;
+		return false;
 	}
 
 	// All restrictions, if there were any,
