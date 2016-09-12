@@ -25,4 +25,6 @@ int to_netfilter_int(const Verdict&);
 
 std::string to_string(const Verdict&);
 
+std::ostream& operator << (std::ostream&, const Verdict&);
+
 } // end namespace

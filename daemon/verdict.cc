@@ -23,3 +23,7 @@ std::string PersonalFirewall::to_string(const Verdict& v) {
 			return "undecided";
 	}
 }
+
+ostream& PersonalFirewall::operator << (ostream& where, const Verdict& v) {
+	return where << to_string(v);
+}
