@@ -12,6 +12,7 @@ set(persfw_sources
 	dissect-packet
 	verdict
 	packet
+	rulerepository
 )
 
 add_definitions(-Wall -Wextra -Werror)

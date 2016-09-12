@@ -25,7 +25,7 @@ namespace {
 
 void PacketHandlingFunction() {
 
-	RuleRepository rr("rules.txt");
+	RuleRepository rr(Verdict::accept, "rules/");
 
 	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
