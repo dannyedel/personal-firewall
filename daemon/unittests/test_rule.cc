@@ -12,10 +12,8 @@ BOOST_AUTO_TEST_CASE(throwOnDns) {
 	match.put("sourcehostname", "resolveme");
 
 	ptree facts;
-	facts.put("source", "10.1.1.1");
-	facts.put("source4", "10.1.1.1");
-	facts.put("destination", "10.2.2.2");
-	facts.put("destination4", "10.2.2.2");
+	facts.put("sourceaddress", "10.1.1.1");
+	facts.put("destinationaddress", "10.2.2.2");
 
 	Packet p{ facts };
 	Rule r{ match, Verdict::accept };
@@ -30,7 +28,7 @@ BOOST_AUTO_TEST_CASE(simpleMatch) {
 	 */
 
 	ptree facts;
-	facts.put("source", "10.1.2.3");
+	facts.put("sourceaddress", "10.1.2.3");
 	facts.put("sourceport", "80");
 	facts.put("layer4protocol", "tcp");
 
@@ -46,12 +44,12 @@ BOOST_AUTO_TEST_CASE(addressMatchesSrcOrDest) {
 	match.put("address", "10.1.1.1");
 
 	ptree facts1;
-	facts1.put("source", "10.1.1.1");
-	facts1.put("destination", "10.2.2.2");
+	facts1.put("sourceaddress", "10.1.1.1");
+	facts1.put("destinationaddress", "10.2.2.2");
 
 	ptree facts2;
-	facts2.put("source", "10.2.2.2");
-	facts2.put("destination", "10.1.1.1");
+	facts2.put("sourceaddress", "10.2.2.2");
+	facts2.put("destinationaddress", "10.1.1.1");
 
 	Packet p1{ facts1 };
 	Packet p2{ facts2 };
@@ -68,14 +66,14 @@ BOOST_AUTO_TEST_CASE(testNoMatch) {
 	match1.put("address", "10.3.3.3");
 
 	ptree match2;
-	match2.put("source", "10.3.3.3");
+	match2.put("sourceaddress", "10.3.3.3");
 	
 	ptree match3;
-	match3.put("destination", "10.3.3.3");
+	match3.put("destinationaddress", "10.3.3.3");
 
 	ptree facts;
-	facts.put("source", "10.1.1.1");
-	facts.put("destination", "10.2.2.2");
+	facts.put("sourceaddress", "10.1.1.1");
+	facts.put("destinationaddress", "10.2.2.2");
 
 	Packet p{ facts };
 

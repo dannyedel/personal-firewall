@@ -295,10 +295,10 @@ void PersonalFirewall::dissect_ipv4_header(
 	if ( ! inet_ntop(AF_INET, &iph->daddr, dbuf, INET_ADDRSTRLEN ) )
 		throw LowlevelFailure("inet_ntop (dest)");
 
-	pt.put("source", sbuf);
-	pt.put("source4", sbuf);
-	pt.put("destination", dbuf);
-	pt.put("destination4", dbuf);
+	pt.put("sourceaddress", sbuf);
+	pt.put("sourceaddress4", sbuf);
+	pt.put("destinationaddress", dbuf);
+	pt.put("destinationaddress4", dbuf);
 
 	pt.put("layer4protocolnumber", iph->protocol);
 
@@ -444,10 +444,10 @@ void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*ip
 
 	const char * source = inet_ntop(AF_INET6, &iph->ip6_src, sbuf, INET6_ADDRSTRLEN);
 	const char * dest = inet_ntop(AF_INET6, &iph->ip6_dst, dbuf, INET6_ADDRSTRLEN);
-	pt.put("source", source);
-	pt.put("source6", source);
-	pt.put("destination", dest);
-	pt.put("destination6", dest);
+	pt.put("sourceaddress", source);
+	pt.put("sourceaddress6", source);
+	pt.put("destinationaddress", dest);
+	pt.put("destinationaddress6", dest);
 	protoent* protoinfo = getprotobynumber(iph->ip6_nxt);
 	if ( protoinfo ) {
 		pt.put("layer4protocol", protoinfo->p_name);
@@ -640,8 +640,8 @@ void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queu
 
 	// Lookup source hostname locally, lookup
 	// destination hostname in thread
-	thread dst(lookupAndWrite, ref(p), ref(m), "destination", "destinationhostname");
-	lookupAndWrite( p, m, "source", "sourcehostname");
+	thread dst(lookupAndWrite, ref(p), ref(m), "destinationaddress", "destinationhostname");
+	lookupAndWrite( p, m, "sourceaddress", "sourcehostname");
 	// Lookups are now running in paralell
 	dst.join();
 	// Both lookups are complete now
