@@ -38,6 +38,29 @@ BOOST_AUTO_TEST_CASE(simpleMatch) {
 	BOOST_CHECK( r.matches(p) );
 }
 
+BOOST_AUTO_TEST_CASE(wildcardMatch) {
+	ptree facts;
+	facts.put("sourcehostname", "somehost.example.org");
+	ptree metadata;
+	metadata.put("hostnamelookupdone", "true");
+
+	Packet p{ facts, metadata };
+
+	ptree match;
+	match.put("hostnamematch", "*.example.org");
+
+	Rule r{ match , Verdict::accept };
+
+	BOOST_CHECK( r.matches(p) );
+
+	ptree facts2;
+	facts2.put("sourcehostname", "somehost.example.com");
+
+	Packet p2{ facts2, metadata };
+
+	BOOST_CHECK( ! r.matches(p2) );
+}
+
 BOOST_AUTO_TEST_CASE(addressMatchesSrcOrDest) {
 
 	ptree match;

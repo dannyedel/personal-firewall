@@ -1,6 +1,7 @@
 #include "rule.hh"
 #include <vector>
 #include <boost/log/trivial.hpp>
+#include <fnmatch.h>
 
 using namespace boost::property_tree;
 using namespace PersonalFirewall;
@@ -67,8 +68,36 @@ bool Rule::matches(const Packet& p) const {
 				BOOST_LOG_TRIVIAL(trace) << "Need DNS resolve to check " << pair.first;
 				throw NeedDnsResolve();
 			}
+			if ( pair.first == "hostnamematch" ) {
+				// Special hostname match system
+				auto source = p.facts.get_optional<string>("sourcehostname");
+				auto dest = p.facts.get_optional<string>("destinationhostname");
+
+				// If neither of them matches the specified match key,
+				// this match is a fail
+				//
+				// structure of this devil:
+				// if not (source exists and matches) and not (dest exists and matches)
+				// then return false
+				bool matched = false;
+				if ( source ) {
+					// source exists
+					if ( 0 == fnmatch(data.c_str(), source->c_str(), 0) )
+						matched = true;
+				}
+				else if ( dest ) {
+					if ( 0 == fnmatch(data.c_str(), dest->c_str(), 0))
+						matched=true;
+				}
+				if ( not matched ) {
+					BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
+						<< " vs. '" << source << "' -> '" << dest << "'";
+					return false;
+				}
+
+			}
 			// Check if this is a special dns key
-			if ( contains(specialKeys, pair.first) ) {
+			else if ( contains(specialKeys, pair.first) ) {
 				if ( data != p.facts.get_optional<string>("source"+pair.first)
 					&& data != p.facts.get_optional<string>("destination"+pair.first) )
 				{
