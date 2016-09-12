@@ -1,5 +1,7 @@
 #pragma once
 
+#include "verdict.hh"
+
 #include <boost/filesystem.hpp>
 
 /** Set of rules
@@ -26,6 +28,6 @@ public:
 	 * If a verdict could not be reached, but all rules
 	 * have been checked, this will return "undecided".
 	 */
-	const Verdict processPacket(const Packet&);
+	PersonalFirewall::Verdict processPacket(const PersonalFirewall::Packet&);
 
 };

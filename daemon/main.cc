@@ -1,6 +1,7 @@
 #include "netfilter-queue-library.hh"
 #include "netfilter-callback.hh"
 #include "packetqueue.hh"
+#include "rulerepository.hh"
 
 #include <cstdlib> // exit
 
@@ -18,58 +19,46 @@ using namespace PersonalFirewall;
 namespace {
 	PacketQueue packetqueue;
 
-	const bool alwaysLookup=true;
-
 	nfq_q_handle* qh;
 
 }
 
 void PacketHandlingFunction() {
+
+	RuleRepository rr("rules.txt");
+
 	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
 		try {
 			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction(): blocking on the queue";
 			Packet p = packetqueue.read();
-			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction() got a packet";
-	
-	/** FIXME: Apply rules */
+			try {
+				BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
 
-	/** DNS Lookup
-	 *
-	 * Looks up if we still need a verdict or alwaysLookup is true
-	 *
-	 * Never lookup DNS packets themselves
-	 */
-	if ( ! p.metadata.get<bool>("hostnamelookupdone")
-		&& ( p.verdict == Verdict::undecided || alwaysLookup )
-	   ) {
-		if ( is_dns_packet(p.facts) ) {
-			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " is a DNS packet, not looking it up";
-		} else {
-			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup";
-			BOOST_LOG_TRIVIAL(trace) << "Packet " << p.id() << ": " << p;
-			thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
-			injectThread.detach();
-			continue;
-		}
-	}
+				/** FIXME: Apply rules */
 
-	BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
+				/** Ask the rule repository for a verdict.
+				 * This will throw if it needs a DNS resolve. */
+				Verdict v = rr.processPacket(p);
 
-	if ( p.verdict == Verdict::undecided ) {
-		BOOST_LOG_TRIVIAL(debug) << "Undecided, setting accept on " << p.id();
-		nfq_set_verdict(qh,
-			p.facts.get<int>("packetid"),
-			to_netfilter_int(Verdict::accept),
-			0,
-			nullptr);
-		continue;
-	}
+				if ( v == Verdict::undecided ) {
+					BOOST_LOG_TRIVIAL(warning) << "Packet did not match any rule, setting accept on " << p.id();
+				}
 
-	int verdict = to_netfilter_int(p.verdict);
-	int id = p.facts.get<int>("packetid");
-	BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(p.verdict) << " for packet " << p.id();
-	nfq_set_verdict(qh, id, verdict, 0, nullptr);
+				BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(v) << " for packet " << p.id();
+
+				nfq_set_verdict(
+					qh,
+					p.facts.get<int>("packetid"),
+					to_netfilter_int( v ), // this throws if it needs a DNS lookup
+					0,
+					nullptr);
+			}
+			catch( NeedDnsResolve& e) {
+				BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup before a decision";
+				thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
+				injectThread.detach();
+			}
 		} catch( ShutdownException& e) {
 			BOOST_LOG_TRIVIAL(debug) << e.what();
 			return;
