@@ -175,12 +175,13 @@ bool PersonalFirewall::is_dns_packet(const ptree& pt) {
 	try {
 		/* Check if the packet is from our process ID */
 		const string ourPID = readlink_str("/proc/self");
-		if ( ourPID != pt.get<string>("pid") )
+		if ( ourPID == pt.get<string>("pid") )
 		{
-			/* The packet is not from us
-			 * doesnt matter if it does to port 53
+			/* The packet is from the firewall itself, so it is trusted
+			 *
+			 * FIXME: This will need to be rectified soon
 			 */
-			return false;
+			return true;
 		}
 	} catch( exception& e ) {
 		BOOST_LOG_TRIVIAL(warning) << "Cannot check if packet is from us: " << e.what();
