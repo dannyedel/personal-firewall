@@ -11,6 +11,7 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 add_executable(boost_testrunner
 	test_main
 	test_rule
+	test_rulerepository
 	../rule
 	../rulerepository
 	../packet
