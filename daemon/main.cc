@@ -15,6 +15,7 @@
 
 using namespace std;
 using namespace PersonalFirewall;
+using boost::property_tree::ptree;
 
 namespace {
 	PacketQueue packetqueue;
@@ -25,7 +26,23 @@ namespace {
 
 void PacketHandlingFunction() {
 
-	RuleRepository rr(Verdict::accept, "rules/");
+	RuleRepository rr(Verdict::reject, "rules/");
+
+	{
+		// Allow DNS resolves
+		ptree pt;
+		pt.put("direction", "output");
+		pt.put("layer4protocol", "udp");
+		pt.put("destinationport", "53");
+		rr.append_rule( Rule(pt, Verdict::accept) );
+	}
+
+	{
+		// Accept connections to git.simon-mueller.de
+		ptree pt;
+		pt.put("hostname", "gitlab992.server.simon-mueller.de");
+		rr.append_rule( Rule(pt, Verdict::accept) );
+	}
 
 	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
