@@ -38,9 +38,9 @@ void PacketHandlingFunction() {
 	}
 
 	{
-		// Accept connections to git.simon-mueller.de
+		// Accept connections to our servers
 		ptree pt;
-		pt.put("hostname", "gitlab992.server.simon-mueller.de");
+		pt.put("hostnamematch", "*.server.simon-mueller.de");
 		rr.append_rule( Rule(pt, Verdict::accept) );
 	}
 
