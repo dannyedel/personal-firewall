@@ -24,6 +24,7 @@ packetid
 
 hwproto
 :	(integer) The Layer 2 protocol, if available.
+	For example, IPv4 is 2048 (0x0800), and IPv6 is 34525 (0x86DD)
 
 direction
 :	(string) Direction of the packet, either `input`, `output` or `forward`.
