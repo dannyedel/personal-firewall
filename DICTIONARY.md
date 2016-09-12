@@ -39,22 +39,22 @@ destinationhostname
 	address.  If a forward-lookup of the resulting hostname does **not** include
 	the packet's address, the hostname field will not be present.
 
-source
+sourceaddress
 :	(string) the source IP (v4 or v6)
 
-destination
+destinationaddress
 :	(string) the destination IP (v4 or v6)
 
-source4
+sourceaddress4
 :	(string) IPv4 source address
 
-source6
+sourceaddress6
 :	(string) IPv6 source address
 
-destination4
+destinationaddress4
 :	(string) IPv4 destination address
 
-destination6
+destinationaddress6
 :	(string) IPv6 destination address
 
 layer4protocol
