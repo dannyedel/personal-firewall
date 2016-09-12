@@ -13,6 +13,7 @@ set(persfw_sources
 	verdict
 	packet
 	rulerepository
+	rule
 )
 
 add_definitions(-Wall -Wextra -Werror)
@@ -34,3 +35,5 @@ install(TARGETS
 	personal-firewalld
 	RUNTIME DESTINATION sbin
 )
+
+add_subdirectory(unittests)

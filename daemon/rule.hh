@@ -1,5 +1,7 @@
 #pragma once
 
+#include "packet.hh"
+
 namespace PersonalFirewall {
 
 	struct Rule {

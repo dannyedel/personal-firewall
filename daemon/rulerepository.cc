@@ -1,6 +1,7 @@
 #include "rulerepository.hh"
 
 using namespace std;
+using boost::filesystem::path;
 
 namespace PersonalFirewall {
 
@@ -10,6 +11,9 @@ void RuleRepository::append_rule(Rule&& r) {
 
 void RuleRepository::clear_rules() {
 	_rules.clear();
+}
+
+RuleRepository::RuleRepository(const Verdict&, const path&) {
 }
 
 Verdict RuleRepository::processPacket(const Packet& p) {
