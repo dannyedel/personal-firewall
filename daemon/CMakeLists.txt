@@ -7,7 +7,6 @@ find_package(Boost REQUIRED COMPONENTS iostreams log)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
 set(persfw_sources
-	main
 	netfilter-callback
 	dissect-packet
 	verdict
@@ -20,6 +19,7 @@ add_definitions(-Wall -Wextra -Werror)
 
 add_executable(personal-firewalld
 	${persfw_sources}
+	main
 )
 
 target_link_libraries(personal-firewalld

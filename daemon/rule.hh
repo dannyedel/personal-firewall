@@ -4,12 +4,13 @@
 
 namespace PersonalFirewall {
 
-	struct Rule {
+	class Rule {
+	public:
 		/*** Set of restrictions that define whether this rule matches ***/
-		boost::property_tree::ptree restrictions;
+		const boost::property_tree::ptree restrictions;
 
-		/*** Verdict if it matches ***/
-		Verdict verdict;
+		/*** Verdict if this rule matches ***/
+		const Verdict verdict;
 
 		/** Does this rule match against the packet?
 		 *
@@ -17,6 +18,11 @@ namespace PersonalFirewall {
 		 * with non-present DNS name data.
 		 * */
 		bool matches( const Packet& p) const;
+
+		Rule(const boost::property_tree::ptree&, const Verdict& verdict);
+
+	private:
+		void validate_keys();
 	};
 
 }

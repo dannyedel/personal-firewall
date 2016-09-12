@@ -11,8 +11,10 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 add_executable(boost_testrunner
 	test_main
 	test_rule
-	../rulerepository
 	../rule
+	../rulerepository
+	../packet
+	../verdict
 )
 
 target_link_libraries(boost_testrunner PRIVATE ${Boost_LIBRARIES})

@@ -17,3 +17,11 @@ ostream& PersonalFirewall::operator<< (ostream& where, const Packet& what) {
 int Packet::id() const {
 	return facts.get<int>("packetid");
 }
+
+Packet::Packet(const ptree& facts, const ptree& metadata) {
+	(void)facts;
+	(void)metadata;
+}
+
+Packet::Packet(const ptree& facts): Packet(facts, ptree()) {
+}
