@@ -85,7 +85,7 @@ bool Rule::matches(const Packet& p) const {
 					if ( 0 == fnmatch(data.c_str(), source->c_str(), 0) )
 						matched = true;
 				}
-				else if ( dest ) {
+				if ( dest ) {
 					if ( 0 == fnmatch(data.c_str(), dest->c_str(), 0))
 						matched=true;
 				}
