@@ -38,6 +38,13 @@ void PacketHandlingFunction() {
 	}
 
 	{
+		// Allow connections to my local apt-cacher-ng
+		ptree pt;
+		pt.put("address", "10.54.5.11");
+		rr.append_rule( Rule(pt, Verdict::accept) );
+	}
+
+	{
 		// Accept connections to our servers
 		ptree pt;
 		pt.put("hostnamematch", "*.server.simon-mueller.de");
