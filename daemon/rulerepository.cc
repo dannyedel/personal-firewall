@@ -13,7 +13,9 @@ void RuleRepository::clear_rules() {
 	_rules.clear();
 }
 
-RuleRepository::RuleRepository(const Verdict&, const path&) {
+RuleRepository::RuleRepository(const Verdict& v, const path&)
+	: _defaultVerdict(v)
+{
 }
 
 Verdict RuleRepository::processPacket(const Packet& p) {
