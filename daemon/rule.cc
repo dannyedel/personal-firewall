@@ -90,8 +90,12 @@ bool Rule::matches(const Packet& p) const {
 						matched=true;
 				}
 				if ( not matched ) {
-					BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
-						<< " vs. '" << source << "' -> '" << dest << "'";
+					if ( source )
+						BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
+						<< " vs " << *source;
+					if ( dest)
+						BOOST_LOG_TRIVIAL(trace) << "Failed on hostname match, pattern " << data
+						<< " vs " << *dest;
 					return false;
 				}
 

@@ -39,26 +39,39 @@ BOOST_AUTO_TEST_CASE(simpleMatch) {
 }
 
 BOOST_AUTO_TEST_CASE(wildcardMatch) {
-	ptree facts;
-	facts.put("sourcehostname", "somehost.example.org");
 	ptree metadata;
 	metadata.put("hostnamelookupdone", "true");
+	{
+		ptree facts;
+		facts.put("sourcehostname", "somehost.example.org");
+		Packet p{ facts, metadata };
 
-	Packet p{ facts, metadata };
+		ptree match;
+		match.put("hostnamematch", "*.example.org");
 
-	ptree match;
-	match.put("hostnamematch", "*.example.org");
+		Rule r{ match , Verdict::accept };
 
-	Rule r{ match , Verdict::accept };
+		BOOST_CHECK( r.matches(p) );
 
-	BOOST_CHECK( r.matches(p) );
+		ptree facts2;
+		facts2.put("sourcehostname", "somehost.example.com");
 
-	ptree facts2;
-	facts2.put("sourcehostname", "somehost.example.com");
+		Packet p2{ facts2, metadata };
 
-	Packet p2{ facts2, metadata };
+		BOOST_CHECK( ! r.matches(p2) );
+	}
 
-	BOOST_CHECK( ! r.matches(p2) );
+	{
+		ptree facts;
+		facts.put("destinationhostname", "somehost1234.cool-subdomain.example.org");
+		Packet p { facts, metadata};
+
+		ptree match;
+		match.put("hostnamematch", "*.cool-subdomain.example.org");
+		Rule r{ match, Verdict::accept };
+
+		BOOST_CHECK( r.matches(p) );
+	}
 }
 
 BOOST_AUTO_TEST_CASE(addressMatchesSrcOrDest) {
