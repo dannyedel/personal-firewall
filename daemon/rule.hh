@@ -4,6 +4,13 @@
 
 namespace PersonalFirewall {
 
+	bool is_valid_match_key(const std::string&);
+	void validate_match_keys(const boost::property_tree::ptree&);
+
+	struct InvalidMatchKey: public InvalidKey {
+		InvalidMatchKey(const std::string&);
+	};
+
 	class Rule {
 	public:
 		/*** Set of restrictions that define whether this rule matches ***/
