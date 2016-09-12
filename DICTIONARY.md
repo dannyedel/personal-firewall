@@ -19,6 +19,12 @@ facts
 List of all the possible names in a `facts` property tree (things you
 can inspect about a packet).
 
+packetid
+:	(integer) The Packet ID as given by the netfilter queue library.
+
+hwproto
+:	(integer) The Layer 2 protocol, if available.
+
 direction
 :	(string) Direction of the packet, either `input`, `output` or `forward`.
 	This should™ be equivalent to the iptables chain
@@ -71,12 +77,17 @@ pid
 binary
 :	(string) path to the binary owning the local endpoint, if available
 
-user
+cmdline
+:	(string) the command line used to call the binary, if available
+
+owner
 :	(string) name of the user owning the local endpoint, if available
 
-userid
+uid
 :	(integer) id of the user owning the local endpoint, if available
 
+gid
+:	(integer) id of the group owning the local endpoint, if available
 
 metadata
 --------

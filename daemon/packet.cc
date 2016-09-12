@@ -9,22 +9,27 @@ using namespace boost::property_tree;
 /** Alphabetically sorted list of valid fact strings */
 const vector<string> validFactsKeys = {
 	"binary",
+	"cmdline",
 	"destination",
 	"destination4",
 	"destination6",
 	"destinationhostname",
 	"destinationport",
 	"direction",
+	"gid",
+	"hwproto",
 	"layer4protocol",
 	"layer4protocolnumber",
+	"owner",
+	"packetid",
 	"pid",
 	"source",
 	"source4",
 	"source6",
 	"sourcehostname",
 	"sourceport",
+	"uid",
 	"user",
-	"userid",
 };
 
 const vector<string> validMetadataKeys = {
@@ -44,9 +49,10 @@ int Packet::id() const {
 	return facts.get<int>("packetid");
 }
 
-Packet::Packet(const ptree& facts, const ptree& metadata) {
-	(void)facts;
-	(void)metadata;
+Packet::Packet(const ptree& f, const ptree& m):
+	facts(f),
+	metadata(m) {
+	validate_keys();
 }
 
 Packet::Packet(const ptree& facts): Packet(facts, ptree()) {
