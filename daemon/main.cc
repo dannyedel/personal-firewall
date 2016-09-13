@@ -8,6 +8,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "dissect-packet.hh"
 
@@ -16,6 +17,8 @@
 using namespace std;
 using namespace PersonalFirewall;
 using boost::property_tree::ptree;
+using boost::filesystem::path;
+using boost::lexical_cast;
 
 namespace {
 	PacketQueue packetqueue;
@@ -24,32 +27,9 @@ namespace {
 
 }
 
-void PacketHandlingFunction() {
+void PacketHandlingFunction(const Verdict& v, const path& p) {
 
-	RuleRepository rr(Verdict::reject, "rules/");
-
-	{
-		// Allow DNS resolves
-		ptree pt;
-		pt.put("direction", "output");
-		pt.put("layer4protocol", "udp");
-		pt.put("destinationport", "53");
-		rr.append_rule( Rule(pt, Verdict::accept) );
-	}
-
-	{
-		// Allow connections to my local apt-cacher-ng
-		ptree pt;
-		pt.put("address", "10.54.5.11");
-		rr.append_rule( Rule(pt, Verdict::accept) );
-	}
-
-	{
-		// Accept connections to our servers
-		ptree pt;
-		pt.put("hostnamematch", "*.server.simon-mueller.de");
-		rr.append_rule( Rule(pt, Verdict::accept) );
-	}
+	RuleRepository rr(v, p);
 
 	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
@@ -90,10 +70,16 @@ void PacketHandlingFunction() {
 	}
 };
 
-int main() {
+int main(int argc, char** argv) {
+	/** FIXME: Handle command-line-options with boost **/
 
+	if ( argc < 3 ) {
+		BOOST_LOG_TRIVIAL(fatal) << "Usage: " << argv[0] << " <default-verdict> <path/to/rules>" << endl;
+		return 1;
+	}
 
-	/** FIXME: Handle command-line-options **/
+	const Verdict verd = lexical_cast<Verdict>(argv[1]);
+	const path rulepath{ argv[2] };
 
 	/** FIXME: Add iptables rules **/
 
@@ -136,7 +122,7 @@ int main() {
 	int fd= nfq_fd(h);
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE file descriptor: " << fd;
 
-	thread handlerThread( PacketHandlingFunction);
+	thread handlerThread( PacketHandlingFunction, verd, rulepath);
 	for(;;)
 	{
 		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd " << fd;
