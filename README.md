@@ -47,7 +47,26 @@ resolving.
 
 The software does not attempt to exclude DNS resolves from filtering.
 Please write appropriate rules, i.e. write a rule allowing requests to
-your DNS server before you write any rule matching hostnames.
+your DNS server **before** you write any rule matching hostnames.
+
+### DNS reverse / forward lookup behaviour
+
+When trying to determine the hostname belonging to an IP, the firewall
+will always forward-resolve the given hostname to check if it includes
+the given IP.  If this is not the case, a diagnostic will be printed and
+the hostname lookup will be treated as failed.
+
+This happens for example, if an IP address gets re-assigned to a
+different customer, but the reverse lookup still points into the old
+customer's domain.  Once the old customer updates their forward zone,
+this firewall will no longer treat connections to the IP as belonging to
+the old customer.
+
+## Full IPv6 support
+
+This firewall was written with full IPv6 support in mind.  No features
+are exclusive to IPv4, and hostname matchers will lookup both v4 and v6
+addresses using getaddrinfo().
 
 ## Writing rules
 
