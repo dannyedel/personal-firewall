@@ -20,6 +20,10 @@ add_executable(boost_testrunner
 	../verdict
 )
 
+# Copy rule data
+file(COPY rules DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY invalid-rules DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 target_link_libraries(boost_testrunner
 	PRIVATE
 		${Boost_LIBRARIES}

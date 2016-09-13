@@ -129,4 +129,25 @@ BOOST_AUTO_TEST_CASE(testInvalidKey) {
 	BOOST_CHECK_THROW( Rule r(match, Verdict::accept), InvalidKey);
 }
 
+BOOST_AUTO_TEST_CASE(constructFromFile) {
+	Rule fromfile( "rules/01_accept_from_b" );
+
+	ptree pt;
+	pt.put("hostname", "b");
+	Rule direct( pt, Verdict::accept);
+
+	BOOST_CHECK_EQUAL(fromfile, direct);
+}
+
+BOOST_AUTO_TEST_CASE(throwOnInvalidFile) {
+
+	BOOST_CHECK_THROW(Rule("invalid-rules/invalidverdict"), InvalidRuleFile);
+
+	BOOST_CHECK_THROW(Rule("invalid-rules/invalidtree"), InvalidRuleFile);
+
+	BOOST_CHECK_THROW(Rule("invalid-rules/invalidkey"), InvalidRuleFile);
+
+	BOOST_CHECK_THROW(Rule("invalid-rules/emptyfile"), InvalidRuleFile);
+}
+
 BOOST_AUTO_TEST_SUITE_END();
