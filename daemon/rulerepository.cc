@@ -57,7 +57,7 @@ Verdict RuleRepository::processPacket(const Packet& p) {
 	BOOST_LOG_TRIVIAL(trace) << "Starting rule application for packet " << p.id();
 	unsigned int rulenum=0;
 	for( const auto& rule: _rules ) {
-		BOOST_LOG_TRIVIAL(trace) << "Testing rule " << rulenum << " on packet " << p.id();
+		BOOST_LOG_TRIVIAL(trace) << "Testing rule " << rulenum << ": " << rule << " on packet " << p.id();
 		if ( rule.matches(p) ) {
 			BOOST_LOG_TRIVIAL(trace) << "Rule " << rulenum <<
 				" matched, setting verdict " << rule.verdict() <<
