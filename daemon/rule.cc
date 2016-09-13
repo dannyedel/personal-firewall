@@ -107,7 +107,7 @@ bool Rule::matches(const Packet& p) const {
 				if ( data != source && data != dest )
 				{
 					BOOST_LOG_TRIVIAL(trace) << "Failed on special DNS [" << pair.first
-						<< "]: " << data << "vs. " << source << " => " << dest;
+						<< "]: " << data << " vs. " << source << " => " << dest;
 					return false;
 				}
 			} else {
