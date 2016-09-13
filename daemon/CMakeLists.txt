@@ -4,7 +4,7 @@ include(FindPkgConfig)
 pkg_search_module(NFQUEUE REQUIRED libnetfilter_queue)
 find_package(Threads REQUIRED)
 find_package(Boost REQUIRED
-	COMPONENTS iostreams log system)
+	COMPONENTS iostreams log system filesystem)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
 set(persfw_sources
