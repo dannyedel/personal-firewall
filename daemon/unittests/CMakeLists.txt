@@ -13,6 +13,7 @@ add_executable(boost_testrunner
 	test_main
 	test_rule
 	test_rulerepository
+	test_verdict
 	../rule
 	../rulerepository
 	../packet
