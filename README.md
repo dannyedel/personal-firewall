@@ -52,7 +52,7 @@ accept
 direction output
 destinationaddress 10.1.1.1
 layer4protocol udp
-destinationport 53
+destinationport 53 ; dns port!
 ```
 
 Assuming your DNS resolver is 10.1.1.1, this may be a useful first rule.
@@ -60,6 +60,10 @@ The rules are applied in alphabetical order, and files starting with a
 dot are ignored.  Read the `DICTIONARY.md` file for valid words.
 Valid actions are `accept`, `reject` and `undecided` (the latter will
 just pass through to the next rule).
+
+The rule file uses boost::property\_tree's INFO format beginning with
+the second line, allowing comments.  Just the first line is not allowed
+to contain comments.
 
 ## Launching the program
 
