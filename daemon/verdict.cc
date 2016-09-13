@@ -1,6 +1,9 @@
 #include "verdict.hh"
 
 #include "netfilter-queue-library.hh"
+
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <linux/netfilter.h>
 
 using namespace PersonalFirewall;

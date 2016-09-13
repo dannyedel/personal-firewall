@@ -4,10 +4,10 @@
 #include <utility> // pair
 #include <vector>
 #include <arpa/inet.h>
-#include <linux/ip.h> // ip_hdr
-#include <netinet/ip6.h> // ip6_hdr
 #include <netdb.h> //protoinfo
 #include <boost/log/trivial.hpp>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <linux/tcp.h> // tcphdr
 #include <linux/udp.h> // udphdr
 #include <sys/types.h> // getpwuid_r
@@ -18,6 +18,7 @@
 #include <thread> // std::thread
 #include <functional> // std::ref
 #include <chrono>
+
 
 using namespace std;
 using namespace boost::property_tree;
