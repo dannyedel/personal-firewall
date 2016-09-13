@@ -21,6 +21,37 @@ BOOST_AUTO_TEST_CASE(throwOnDns) {
 	BOOST_CHECK_THROW( r.matches(p), NeedDnsResolve);
 }
 
+BOOST_AUTO_TEST_CASE(tryNonDnsFirst) {
+	ptree facts;
+	facts.put("sourceaddress", "10.1.1.1");
+	facts.put("destinationaddress", "10.2.2.2");
+	facts.put("sourceport", "52");
+	facts.put("destinationport", "54");
+	Packet p{facts};
+
+	// The hostname is specified first, but the
+	// port can be checked without DNS resolve.
+	//
+	// Verify that this answers without DNS.
+	ptree match;
+	match.put("hostname", "resolveme");
+	match.put("port", "53");
+	Rule r{ match, Verdict::accept };
+
+	// Must not throw, can be decided without DNS
+	BOOST_CHECK( ! r.matches(p) );
+
+	// Now we use a port that matches, so
+	// the answer depends on the hostname.
+	// This will trigger a DNS resolve.
+	ptree match2;
+	match2.put("hostname", "resolveme");
+	match2.put("port", "54");
+	Rule r2{ match2, Verdict::accept };
+	BOOST_CHECK_THROW( r2.matches(p), NeedDnsResolve);
+
+}
+
 BOOST_AUTO_TEST_CASE(simpleMatch) {
 	/** Tests whether a simple ruleset matches itself.
 	 *
