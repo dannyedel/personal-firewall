@@ -16,7 +16,7 @@ BOOST_AUTO_TEST_CASE(emptyreturnsdefault)
 	};
 
 	for( const auto& verdict: testthis) {
-		RuleRepository rr( verdict, "/dev/null");
+		RuleRepository rr( verdict );
 		ptree tree;
 		tree.put("packetid", 1);
 		Packet p{ tree };
