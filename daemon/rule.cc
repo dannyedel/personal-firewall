@@ -171,4 +171,18 @@ void PersonalFirewall::validate_match_keys(const ptree& tree) {
 InvalidMatchKey::InvalidMatchKey( const string& s):
 	InvalidKey(s, "rule")
 {
-};
+}
+
+bool PersonalFirewall::operator == (const Rule& r1, const Rule& r2) {
+	return tie(r1.restrictions, r1.verdict) ==
+		tie(r2.restrictions, r2.verdict);
+}
+
+ostream& PersonalFirewall::operator << (ostream& where, const Rule& r) {
+	where << "Rule[";
+	for(const auto& pair: r.restrictions) {
+		where << pair.first << "=" << pair.second.data() << ",";
+	}
+	where << "verdict=" << r.verdict << "]";
+	return where;
+}

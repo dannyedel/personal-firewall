@@ -32,4 +32,8 @@ namespace PersonalFirewall {
 		void validate_keys();
 	};
 
+	bool operator == (const Rule&, const Rule&);
+
+	std::ostream& operator << (std::ostream&, const Rule&);
+
 }
