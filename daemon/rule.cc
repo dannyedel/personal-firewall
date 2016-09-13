@@ -2,9 +2,14 @@
 #include <vector>
 #include <boost/log/trivial.hpp>
 #include <fnmatch.h>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/property_tree/info_parser.hpp>
 
 using namespace boost::property_tree;
+using namespace boost::filesystem;
 using namespace PersonalFirewall;
+using boost::lexical_cast;
 using namespace std;
 
 /** Keys that cannot be decided without DNS lookup */
@@ -29,7 +34,7 @@ inline bool contains(const vector<string>& vec, const string& s) {
 bool Rule::matches(const Packet& p) const {
 	try {
 	// Test given keys one by one to see if they match
-	for( const auto& pair: restrictions) {
+	for( const auto& pair: restrictions()) {
 		// First check the simple keys
 		if ( ! contains(dnsKeys, pair.first)
 			&& ! contains(specialKeys, pair.first) ) {
@@ -43,7 +48,7 @@ bool Rule::matches(const Packet& p) const {
 		}
 	}
 	// Check special non-dns keys
-	for( const auto& pair: restrictions ) {
+	for( const auto& pair: restrictions() ) {
 		if ( contains(specialKeys, pair.first) && ! contains(dnsKeys, pair.first) ) {
 			const string& data = pair.second.data();
 			auto source = p.facts.get_optional<string>("source"+pair.first);
@@ -60,7 +65,7 @@ bool Rule::matches(const Packet& p) const {
 	}
 	
 	// Check DNS keys
-	for( const auto& pair: restrictions) {
+	for( const auto& pair: restrictions()) {
 		const string& data= pair.second.data();
 		if ( contains(dnsKeys, pair.first) ) {
 			if ( p.metadata.get_optional<string>("hostnamelookupdone") != string("true") ) {
@@ -140,14 +145,14 @@ const vector<string> additionalKeys = {
 };
 
 Rule::Rule( const ptree& r, const Verdict& v):
-	restrictions(r),
-	verdict(v)
+	_restrictions(r),
+	_verdict(v)
 {
 	validate_keys();
 }
 
 void Rule::validate_keys() {
-	validate_match_keys(restrictions);
+	validate_match_keys(restrictions());
 }
 
 bool PersonalFirewall::is_valid_match_key(const string& key) {
@@ -174,15 +179,62 @@ InvalidMatchKey::InvalidMatchKey( const string& s):
 }
 
 bool PersonalFirewall::operator == (const Rule& r1, const Rule& r2) {
-	return tie(r1.restrictions, r1.verdict) ==
-		tie(r2.restrictions, r2.verdict);
+	return tie(r1.restrictions(), r1.verdict()) ==
+		tie(r2.restrictions(), r2.verdict());
 }
 
 ostream& PersonalFirewall::operator << (ostream& where, const Rule& r) {
 	where << "Rule[";
-	for(const auto& pair: r.restrictions) {
+	for(const auto& pair: r.restrictions()) {
 		where << pair.first << "=" << pair.second.data() << ",";
 	}
-	where << "verdict=" << r.verdict << "]";
+	where << "verdict=" << r.verdict() << "]";
 	return where;
+}
+
+const ptree& Rule::restrictions() const {
+	return _restrictions;
+}
+
+const Verdict& Rule::verdict() const {
+	return _verdict;
+}
+
+Rule::Rule(const boost::filesystem::path& p) {
+	/** Open file for reading */
+	boost::filesystem::ifstream file(p);
+	/** Read first line into the verdict */
+	{
+		string s;
+		getline(file, s);
+		try{
+			_verdict = lexical_cast<Verdict>(s);
+		} catch( boost::bad_lexical_cast& e) {
+			BOOST_LOG_TRIVIAL(fatal) << "Cannot parse rule file verdict: " << s;
+			throw InvalidRuleLine1(p, s);
+		}
+	}
+	/** Read remaining lines into the property tree */
+	try{
+		read_info(file, _restrictions);
+		validate_keys();
+	} catch( exception& e) {
+		BOOST_LOG_TRIVIAL(fatal) << "Cannot parse rule file: " << e.what();
+		throw InvalidRuleBody(p, e.what());
+	}
+}
+
+InvalidRuleFile::InvalidRuleFile(const boost::filesystem::path& p, const string& s):
+	runtime_error("The file "+p.native()+" is not a valid rule file, error near "+s)
+{
+}
+
+InvalidRuleLine1::InvalidRuleLine1(const boost::filesystem::path& p, const string& s):
+	InvalidRuleFile(p,s)
+{
+}
+
+InvalidRuleBody::InvalidRuleBody(const boost::filesystem::path& p, const string& s):
+	InvalidRuleFile(p,s)
+{
 }
