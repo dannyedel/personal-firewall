@@ -71,7 +71,7 @@ to `fnmatch(3)`.  In its simplest form, you can write things like:
 
 ```
 accept
-hostname *.my-domain.com
+hostnamematch *.my-domain.com
 ```
 
 To allow all communication in which any host has a suffix of
