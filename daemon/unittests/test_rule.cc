@@ -76,6 +76,47 @@ BOOST_AUTO_TEST_CASE(wildcardMatch) {
 		}
 
 		{
+			/** Example on how to match domain and subdomains */
+			ptree facts_meeo;
+			facts_meeo.put("sourcehostname", "me.example.org");
+			Packet p_meeo{facts_meeo, metadata};
+
+			ptree facts_eo;
+			facts_eo.put("sourcehostname", "example.org");
+			Packet p_eo{facts_eo, metadata};
+
+			ptree facts_noteo;
+			facts_noteo.put("sourcehostname", "attacker.not-example.org");
+			Packet p_noteo{facts_noteo, metadata};
+
+			ptree facts_ecom;
+			facts_ecom.put("sourcehostname", "example.com");
+			Packet p_ecom{facts_ecom, metadata};
+
+			// Example of a bad written rule
+			ptree match_bad;
+			match_bad.put("sourcehostnamematch", "*example.org");
+			Rule rule_bad{match_bad, Verdict::accept};
+
+			// This rule will match example.org, me.example.org,
+			// but also the attacker
+			BOOST_CHECK( rule_bad.matches(p_eo) );
+			BOOST_CHECK( rule_bad.matches(p_meeo) );
+			BOOST_CHECK( rule_bad.matches(p_noteo) ); // this is bad
+			BOOST_CHECK( !rule_bad.matches(p_ecom) ); // as intended
+
+			// Better written rule
+			ptree match_good;
+			match_good.put("sourcehostnamematch", "?(*.)example.org");
+			Rule rule_good{match_good, Verdict::accept};
+
+			BOOST_CHECK( rule_good.matches(p_eo) );
+			BOOST_CHECK( rule_good.matches(p_meeo) );
+			BOOST_CHECK( ! rule_good.matches(p_noteo) ); // aha!
+			BOOST_CHECK( ! rule_good.matches(p_ecom) );
+		}
+
+		{
 			ptree match3;
 			match3.put("destinationhostnamematch", "*.example.org");
 			Rule rule3{ match3, Verdict::accept};

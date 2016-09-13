@@ -65,6 +65,19 @@ The rule file uses boost::property\_tree's INFO format beginning with
 the second line, allowing comments.  Just the first line is not allowed
 to contain comments.
 
+The `hostnamematch`, `sourcehostnamematch` and
+`destinationhostnamematch` fields allow for a pattern defined according
+to `fnmatch(3)`.  In its simplest form, you can write things like:
+
+```
+accept
+hostname *.my-domain.com
+```
+
+To allow all communication in which any host has a suffix of
+`.my-domain.com`.  If you also want to allow `my-domain.com` itself, but
+not `not-my-domain.com`, you can write `?(*.)my-domain.com`.
+
 ## Launching the program
 
 The command-line to run the program is currently
