@@ -96,9 +96,16 @@ string const operator + ( const string& s , const vector<string>& vec) {
 	return ret;
 }
 
+struct ForwardLookupFailed: public runtime_error{
+	ForwardLookupFailed(const std::string& ipaddress, const std::string& hostname):
+		runtime_error("Reverse lookup for "+ipaddress+" resulted in "+hostname+", but this hostname does not resolve!")
+	{
+	}
+};
+
 struct ForwardLookupMismatch: public runtime_error{
 	ForwardLookupMismatch(const std::string& ipaddress, const std::string& hostname, const vector<string> addresses):
-		runtime_error("Reverse lookup for "+ipaddress+" resulted in "+hostname+" but this hostname resolves to "+addresses)
+		runtime_error("Reverse lookup for "+ipaddress+" resulted in "+hostname+", but this hostname resolves to "+addresses)
 	{
 	}
 };
@@ -529,6 +536,9 @@ void lookupAndWrite(Packet& packet, std::mutex& m, const std::string& from, cons
 		std::string hostname = dns_reverse_lookup(addr);
 		midpoint = chrono::steady_clock::now();
 		vector<string> addresses = dns_forward_lookup( hostname );
+		if ( addresses.empty() ) {
+			throw ForwardLookupFailed(addr, hostname);
+		}
 		bool found=false;
 		for( const auto& ad: addresses ) {
 			// the address also resolves forward. success!
