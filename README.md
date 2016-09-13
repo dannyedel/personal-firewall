@@ -22,6 +22,16 @@ iptables -t nat -A OUTPUT -j NFQUEUE
 iptables -t nat -F INPUT
 iptables -t nat -A INPUT -i lo -j ACCEPT
 iptables -t nat -A INPUT -j NFQUEUE
+
+### Same for IPv6, outgoing
+ip6tables -t nat -F OUTPUT
+ip6tables -t nat -A OUTPUT -o lo -j ACCEPT
+ip6tables -t nat -A OUTPUT -j NFQUEUE
+
+### Same for IPv6, incoming
+ip6tables -t nat -F INPUT
+ip6tables -t nat -A INPUT -i lo -j ACCEPT
+ip6tables -t nat -A INPUT -j NFQUEUE
 ```
 
 To speed things up, we use the `nat` table, which only queues
