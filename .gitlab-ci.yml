@@ -1,8 +1,14 @@
 build:
     image: dannyedel/personal-firewall-build
+    cache:
+        paths:
+            - build/.ccache
     script:
         - mkdir build
         - cd build
-        - cmake .. -DCMAKE_BUILD_TYPE=Debug
+        - export CCACHE_DIR=$(pwd)/.ccache
+        - PATH=/usr/lib/ccache:$PATH
+          cmake .. -DCMAKE_BUILD_TYPE=Debug
         - make all
         - make test
+        - ccache -s
