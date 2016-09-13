@@ -86,11 +86,11 @@ bool Rule::matches(const Packet& p) const {
 				bool matched = false;
 				if ( source ) {
 					// source exists
-					if ( 0 == fnmatch(data.c_str(), source->c_str(), 0) )
+					if ( 0 == fnmatch(data.c_str(), source->c_str(), FNM_EXTMATCH) )
 						matched = true;
 				}
 				if ( dest ) {
-					if ( 0 == fnmatch(data.c_str(), dest->c_str(), 0))
+					if ( 0 == fnmatch(data.c_str(), dest->c_str(),FNM_EXTMATCH) )
 						matched=true;
 				}
 				if ( not matched ) {
