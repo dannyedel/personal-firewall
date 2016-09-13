@@ -43,4 +43,8 @@ RuleRepository::RuleRepository(const Verdict& v):
 {
 }
 
+const vector<Rule>& RuleRepository::rules() const {
+	return _rules;
+}
+
 } //end namespace
