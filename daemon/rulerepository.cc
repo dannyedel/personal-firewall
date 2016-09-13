@@ -38,4 +38,9 @@ Verdict RuleRepository::processPacket(const Packet& p) {
 	return _defaultVerdict;
 }
 
+RuleRepository::RuleRepository(const Verdict& v):
+	_defaultVerdict(v)
+{
+}
+
 } //end namespace
