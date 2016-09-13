@@ -63,9 +63,7 @@ BOOST_AUTO_TEST_CASE(loadfromdirectory)
 	t2.put("hostname", "a");
 	Rule r2{t2, Verdict::reject};
 
-	RuleRepository rr(Verdict::undecided,
-			/* FIXME: Current path */
-			"rules/");
+	RuleRepository rr(Verdict::undecided, "rules/");
 
 	BOOST_CHECK_EQUAL(r1, rr.rules().at(0));
 	BOOST_CHECK_EQUAL(r2, rr.rules().at(1));
