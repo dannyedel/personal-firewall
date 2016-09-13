@@ -59,14 +59,14 @@ void PacketHandlingFunction() {
 			try {
 				BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
 
-				/** FIXME: Apply rules */
-
 				/** Ask the rule repository for a verdict.
 				 * This will throw if it needs a DNS resolve. */
 				Verdict v = rr.processPacket(p);
 
 				if ( v == Verdict::undecided ) {
-					BOOST_LOG_TRIVIAL(warning) << "Packet did not match any rule, setting accept on " << p.id();
+					/** FIXME: Forward undecided packet to the client, and
+					 * let user decide */
+					BOOST_LOG_TRIVIAL(warning) << "Packet did not match any rule, the verdict is undecided for " << p.id();
 				}
 
 				BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(v) << " for packet " << p.id();
@@ -74,7 +74,7 @@ void PacketHandlingFunction() {
 				nfq_set_verdict(
 					qh,
 					p.facts.get<int>("packetid"),
-					to_netfilter_int( v ), // this throws if it needs a DNS lookup
+					to_netfilter_int( v ),
 					0,
 					nullptr);
 			}
