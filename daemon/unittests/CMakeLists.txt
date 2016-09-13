@@ -19,6 +19,10 @@ add_executable(boost_testrunner
 	../verdict
 )
 
-target_link_libraries(boost_testrunner PRIVATE ${Boost_LIBRARIES})
+target_link_libraries(boost_testrunner
+	PRIVATE
+		${Boost_LIBRARIES}
+		pthread
+)
 
 add_test(NAME Boost_Test_Runner COMMAND boost_testrunner)
