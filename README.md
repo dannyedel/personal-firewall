@@ -113,9 +113,9 @@ not `not-my-domain.com`, you can write `?(*.)my-domain.com`.
 ## Launching the program
 
 The command-line to run the program is currently
-./personal-firewall \<defaultAction\> \<Rules-Directory\>
+./personal-firewall \<defaultVerdict\> \<Rules-Directory\>
 
-Valid default actions are `accept` and `reject`.
+Valid default verdicts are `accept` and `reject`.
 
 ## Known bugs and workarounds
 
