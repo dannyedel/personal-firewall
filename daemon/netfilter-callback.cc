@@ -3,9 +3,7 @@
 #include <vector>
 #include <arpa/inet.h>
 #include <linux/netfilter.h>
-#include <linux/ip.h>
 #include <netdb.h> // protoinfo
-#include <netinet/ip6.h>
 #include <boost/log/trivial.hpp>
 
 #include "netfilter-callback.hh"

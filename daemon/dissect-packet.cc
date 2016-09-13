@@ -4,10 +4,10 @@
 #include <utility> // pair
 #include <vector>
 #include <arpa/inet.h>
-#include <linux/ip.h> // ip_hdr
-#include <netinet/ip6.h> // ip6_hdr
 #include <netdb.h> //protoinfo
 #include <boost/log/trivial.hpp>
+#include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <linux/tcp.h> // tcphdr
 #include <linux/udp.h> // udphdr
 #include <sys/types.h> // getpwuid_r
@@ -18,6 +18,7 @@
 #include <thread> // std::thread
 #include <functional> // std::ref
 #include <chrono>
+
 
 using namespace std;
 using namespace boost::property_tree;
@@ -141,82 +142,7 @@ string readlink_str(const string& param) {
 	return string(link_target_buf.data());
 }
 
-/** FIXME: Make command line options
- *
- *  FIXME: must be alphabetically sorted
- */
-
-vector<string> dnsWhitelistBinaries = {
-	"/usr/sbin/named",
-	"/usr/sbin/nscd",
-};
-
-
 } // end anon namespace
-
-/** Determine whether the packet described by pt is a
- * dns packet, to break loops when resolving hostnames
- *
- * update:  This should only match dns packets generated
- * by *this process*
- * */
-bool PersonalFirewall::is_dns_packet(const ptree& pt) {
-	try {
-		if ( binary_search(
-			dnsWhitelistBinaries.cbegin(),
-			dnsWhitelistBinaries.cend(),
-			pt.get<string>("binary")) )
-		{
-			return true;
-		}
-	} catch( exception& e) {
-		BOOST_LOG_TRIVIAL(warning) << "Cannot check if packet is from a trusted binary: " << e.what();
-	}
-	try {
-		/* Check if the packet is from our process ID */
-		const string ourPID = readlink_str("/proc/self");
-		if ( ourPID == pt.get<string>("pid") )
-		{
-			/* The packet is from the firewall itself, so it is trusted
-			 *
-			 * FIXME: This will need to be rectified soon
-			 */
-			return true;
-		}
-	} catch( exception& e ) {
-		BOOST_LOG_TRIVIAL(warning) << "Cannot check if packet is from us: " << e.what();
-	}
-
-	/* DNS happens via UDP */
-	if ( pt.get<string>("layer4protocol") != "udp" )
-		return false;
-
-	/* Packet was neither generated nor targeted for
-	 * the local machine */
-	if ( pt.get<string>("direction") == "forward" )
-		return false;
-
-	/* Packet from a nameserver to us */
-	if ( pt.get<string>("direction") == "input" &&
-		(
-		 pt.get<int>("sourceport") == 53
-		 || pt.get<int>("sourceport") == 5353
-		) ) {
-		return true;
-	}
-
-	/* Packet from us to a nameserver */
-	if ( pt.get<string>("direction") == "output" &&
-		( pt.get<int>("destinationport") == 53
-		  || pt.get<int>("destinationport") == 5353
-		)
-		  ) {
-		return true;
-	}
-
-	/* Just a regular UDP packet. */
-	return false;
-}
 
 const Packet PersonalFirewall::dissect_packet(nfq_data* nfa) {
 	ptree pt;
@@ -295,10 +221,10 @@ void PersonalFirewall::dissect_ipv4_header(
 	if ( ! inet_ntop(AF_INET, &iph->daddr, dbuf, INET_ADDRSTRLEN ) )
 		throw LowlevelFailure("inet_ntop (dest)");
 
-	pt.put("source", sbuf);
-	pt.put("source4", sbuf);
-	pt.put("destination", dbuf);
-	pt.put("destination4", dbuf);
+	pt.put("sourceaddress", sbuf);
+	pt.put("sourceaddress4", sbuf);
+	pt.put("destinationaddress", dbuf);
+	pt.put("destinationaddress4", dbuf);
 
 	pt.put("layer4protocolnumber", iph->protocol);
 
@@ -444,10 +370,10 @@ void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*ip
 
 	const char * source = inet_ntop(AF_INET6, &iph->ip6_src, sbuf, INET6_ADDRSTRLEN);
 	const char * dest = inet_ntop(AF_INET6, &iph->ip6_dst, dbuf, INET6_ADDRSTRLEN);
-	pt.put("source", source);
-	pt.put("source6", source);
-	pt.put("destination", dest);
-	pt.put("destination6", dest);
+	pt.put("sourceaddress", source);
+	pt.put("sourceaddress6", source);
+	pt.put("destinationaddress", dest);
+	pt.put("destinationaddress6", dest);
 	protoent* protoinfo = getprotobynumber(iph->ip6_nxt);
 	if ( protoinfo ) {
 		pt.put("layer4protocol", protoinfo->p_name);
@@ -640,8 +566,8 @@ void PersonalFirewall::lookup_and_reinject(Packet&& oldPacket, PacketQueue& queu
 
 	// Lookup source hostname locally, lookup
 	// destination hostname in thread
-	thread dst(lookupAndWrite, ref(p), ref(m), "destination", "destinationhostname");
-	lookupAndWrite( p, m, "source", "sourcehostname");
+	thread dst(lookupAndWrite, ref(p), ref(m), "destinationaddress", "destinationhostname");
+	lookupAndWrite( p, m, "sourceaddress", "sourcehostname");
 	// Lookups are now running in paralell
 	dst.join();
 	// Both lookups are complete now

@@ -1,12 +1,14 @@
 #include "netfilter-queue-library.hh"
 #include "netfilter-callback.hh"
 #include "packetqueue.hh"
+#include "rulerepository.hh"
 
 #include <cstdlib> // exit
 
 #include <boost/log/trivial.hpp>
 
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "dissect-packet.hh"
 
@@ -14,62 +16,53 @@
 
 using namespace std;
 using namespace PersonalFirewall;
+using boost::property_tree::ptree;
+using boost::filesystem::path;
+using boost::lexical_cast;
 
 namespace {
 	PacketQueue packetqueue;
-
-	const bool alwaysLookup=true;
 
 	nfq_q_handle* qh;
 
 }
 
-void PacketHandlingFunction() {
+void PacketHandlingFunction(const Verdict& v, const path& p) {
+
+	RuleRepository rr(v, p);
+
 	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
 	for(;;) {
 		try {
 			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction(): blocking on the queue";
 			Packet p = packetqueue.read();
-			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction() got a packet";
-	
-	/** FIXME: Apply rules */
+			try {
+				BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
 
-	/** DNS Lookup
-	 *
-	 * Looks up if we still need a verdict or alwaysLookup is true
-	 *
-	 * Never lookup DNS packets themselves
-	 */
-	if ( ! p.metadata.get<bool>("hostnamelookupdone")
-		&& ( p.verdict == Verdict::undecided || alwaysLookup )
-	   ) {
-		if ( is_dns_packet(p.facts) ) {
-			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " is a DNS packet, not looking it up";
-		} else {
-			BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup";
-			BOOST_LOG_TRIVIAL(trace) << "Packet " << p.id() << ": " << p;
-			thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
-			injectThread.detach();
-			continue;
-		}
-	}
+				/** Ask the rule repository for a verdict.
+				 * This will throw if it needs a DNS resolve. */
+				Verdict v = rr.processPacket(p);
 
-	BOOST_LOG_TRIVIAL(trace) << "Packet recived:" << p;
+				if ( v == Verdict::undecided ) {
+					/** FIXME: Forward undecided packet to the client, and
+					 * let user decide */
+					BOOST_LOG_TRIVIAL(warning) << "Packet did not match any rule, the verdict is undecided for " << p.id();
+				}
 
-	if ( p.verdict == Verdict::undecided ) {
-		BOOST_LOG_TRIVIAL(debug) << "Undecided, setting accept on " << p.id();
-		nfq_set_verdict(qh,
-			p.facts.get<int>("packetid"),
-			to_netfilter_int(Verdict::accept),
-			0,
-			nullptr);
-		continue;
-	}
+				BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(v) << " for packet " << p.id();
 
-	int verdict = to_netfilter_int(p.verdict);
-	int id = p.facts.get<int>("packetid");
-	BOOST_LOG_TRIVIAL(debug) << "Setting verdict " << to_string(p.verdict) << " for packet " << p.id();
-	nfq_set_verdict(qh, id, verdict, 0, nullptr);
+				nfq_set_verdict(
+					qh,
+					p.facts.get<int>("packetid"),
+					to_netfilter_int( v ),
+					0,
+					nullptr);
+			}
+			catch( NeedDnsResolve& e) {
+				BOOST_LOG_TRIVIAL(debug) << "Packet " << p.id() << " needs DNS lookup before a decision";
+				thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
+				injectThread.detach();
+			}
 		} catch( ShutdownException& e) {
 			BOOST_LOG_TRIVIAL(debug) << e.what();
 			return;
@@ -77,10 +70,16 @@ void PacketHandlingFunction() {
 	}
 };
 
-int main() {
+int main(int argc, char** argv) {
+	/** FIXME: Handle command-line-options with boost **/
 
+	if ( argc < 3 ) {
+		BOOST_LOG_TRIVIAL(fatal) << "Usage: " << argv[0] << " <default-verdict> <path/to/rules>" << endl;
+		return 1;
+	}
 
-	/** FIXME: Handle command-line-options **/
+	const Verdict verd = lexical_cast<Verdict>(argv[1]);
+	const path rulepath{ argv[2] };
 
 	/** FIXME: Add iptables rules **/
 
@@ -123,7 +122,7 @@ int main() {
 	int fd= nfq_fd(h);
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE file descriptor: " << fd;
 
-	thread handlerThread( PacketHandlingFunction);
+	thread handlerThread( PacketHandlingFunction, verd, rulepath);
 	for(;;)
 	{
 		BOOST_LOG_TRIVIAL(trace) << "Blocking on recv() on queue fd " << fd;

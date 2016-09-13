@@ -35,9 +35,38 @@ It is ***HIGHLY*** recommended to install `nscd` (the
 name-service-cache-daemon) to avoid massive slowdowns due to DNS
 resolving.
 
-If you have a recursive resolver ready, be sure to add it to the
-whitelist in `dissect-packet.cc` (this will be a command-line option
-soon™).
+The software does not attempt to exclude DNS resolves from filtering.
+Please write appropriate rules, i.e. write a rule allowing requests to
+your DNS server before you write any rule matching hostnames.
+
+## Writing rules
+
+A ruleset is a directory containing text files.  The first line of each
+rule file is the verdict, subsequent lines are the specification of the
+rule.
+
+Example file:
+
+```
+accept
+direction output
+destinationaddress 10.1.1.1
+layer4protocol udp
+destinationport 53
+```
+
+Assuming your DNS resolver is 10.1.1.1, this may be a useful first rule.
+The rules are applied in alphabetical order, and files starting with a
+dot are ignored.  Read the `DICTIONARY.md` file for valid words.
+Valid actions are `accept`, `reject` and `undecided` (the latter will
+just pass through to the next rule).
+
+## Launching the program
+
+The command-line to run the program is currently
+./personal-firewall \<defaultAction\> \<Rules-Directory\>
+
+Valid default actions are `accept` and `reject`.
 
 ## Known bugs and workarounds
 
