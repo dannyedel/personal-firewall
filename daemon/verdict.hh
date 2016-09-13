@@ -27,4 +27,6 @@ std::string to_string(const Verdict&);
 
 std::ostream& operator << (std::ostream&, const Verdict&);
 
+std::istream& operator >> (std::istream&, Verdict&);
+
 } // end namespace
