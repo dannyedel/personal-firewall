@@ -44,6 +44,9 @@ your DNS server before you write any rule matching hostnames.
 A ruleset is a directory containing text files.  The first line of each
 rule file is the verdict, subsequent lines are the specification of the
 rule.
+Files whose name starts with a dot get ignored, this can be useful if
+you want to keep your rules in version control.
+Files are applied in alphabetical order.
 
 Example file:
 
@@ -56,10 +59,10 @@ destinationport 53 ; dns port!
 ```
 
 Assuming your DNS resolver is 10.1.1.1, this may be a useful first rule.
-The rules are applied in alphabetical order, and files starting with a
-dot are ignored.  Read the `DICTIONARY.md` file for valid words.
-Valid actions are `accept`, `reject` and `undecided` (the latter will
-just pass through to the next rule).
+
+Read the `DICTIONARY.md` file for valid keywords.
+Valid actions (first lines) are `accept`,
+`reject` and `undecided` (the latter will just pass through to the next rule).
 
 The rule file uses boost::property\_tree's INFO format beginning with
 the second line, allowing comments.  Just the first line is not allowed
