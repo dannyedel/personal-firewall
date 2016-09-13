@@ -1,16 +1,6 @@
-cache:
-    paths:
-        - /var/cache/apt
-        - /var/lib/apt/lists
-
 build:
-    image: debian:stretch
+    image: dannyedel/personal-firewall-build
     script:
-        - sed -e 's|httpredir.debian.org/debian|mirror.hetzner.de/debian/packages|g'
-          -i /etc/apt/sources.list
-        - apt-get -yqq update
-        - apt-get -y install eatmydata
-        - eatmydata apt-get -y install build-essential libboost-all-dev cmake pkg-config libnetfilter-queue-dev
         - mkdir build
         - cd build
         - cmake .. -DCMAKE_BUILD_TYPE=Debug
