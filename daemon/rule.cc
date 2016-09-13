@@ -15,9 +15,11 @@ using namespace std;
 /** Keys that cannot be decided without DNS lookup */
 const vector<string> dnsKeys = {
 	"destinationhostname",
+	"destinationhostnamematch",
 	"hostname",
 	"hostnamematch",
 	"sourcehostname",
+	"sourcehostnamematch",
 };
 
 /** Keys that can match either the source- or destination- field */
@@ -29,6 +31,22 @@ const vector<string> specialKeys = {
 
 inline bool contains(const vector<string>& vec, const string& s) {
 	return binary_search(vec.cbegin(), vec.cend(), s);
+}
+
+/** uses fnmatch
+ */
+inline bool strmatch(const string& pattern, const string& candidate) {
+	int rc = fnmatch(pattern.c_str(), candidate.c_str(), FNM_EXTMATCH);
+	if ( rc == 0 )
+	{
+		return true;
+	}
+	else if ( rc != FNM_NOMATCH ) {
+		// didnt match, but not the normal NOMATCH code
+		BOOST_LOG_TRIVIAL(warning) << "fnmatch(3) returned error code " << rc <<
+			" when trying to match pattern " << pattern << " against " << candidate;
+	}
+	return false;
 }
 
 bool Rule::matches(const Packet& p) const {
@@ -86,11 +104,11 @@ bool Rule::matches(const Packet& p) const {
 				bool matched = false;
 				if ( source ) {
 					// source exists
-					if ( 0 == fnmatch(data.c_str(), source->c_str(), FNM_EXTMATCH) )
+					if ( strmatch( data, *source ) )
 						matched = true;
 				}
-				if ( dest ) {
-					if ( 0 == fnmatch(data.c_str(), dest->c_str(),FNM_EXTMATCH) )
+				if ( !matched && dest ) {
+					if ( strmatch( data, *dest ) )
 						matched=true;
 				}
 				if ( not matched ) {
@@ -99,6 +117,23 @@ bool Rule::matches(const Packet& p) const {
 					return false;
 				}
 
+			}
+			else if ( pair.first == "sourcehostnamematch" ||
+				pair.first == "destinationhostnamematch"
+					) {
+				const string& pattern = pair.second.data();
+				string dataname = pair.first.substr(0, pair.first.find("match"));
+
+				auto packetdata = p.facts.get_optional<string>(dataname);
+				if ( ! packetdata ) {
+					BOOST_LOG_TRIVIAL(trace) << "Failed because key " << dataname << " not present";
+					return false;
+				}
+				if ( ! strmatch(pattern, *packetdata) ) {
+					BOOST_LOG_TRIVIAL(trace) << "Failed on matcher [" << pair.first << "]: " <<
+						pattern << " vs. " << *packetdata;
+					return false;
+				}
 			}
 			// Check if this is a special dns key
 			else if ( contains(specialKeys, pair.first) ) {
@@ -139,9 +174,11 @@ bool Rule::matches(const Packet& p) const {
  */
 const vector<string> additionalKeys = {
 	"address",
+	"destinationhostnamematch",
 	"hostname",
 	"hostnamematch",
 	"port",
+	"sourcehostnamematch",
 };
 
 Rule::Rule( const ptree& r, const Verdict& v):

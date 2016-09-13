@@ -46,19 +46,44 @@ BOOST_AUTO_TEST_CASE(wildcardMatch) {
 		facts.put("sourcehostname", "somehost.example.org");
 		Packet p{ facts, metadata };
 
-		ptree match;
-		match.put("hostnamematch", "*.example.org");
-
-		Rule r{ match , Verdict::accept };
-
-		BOOST_CHECK( r.matches(p) );
+		ptree factsdest;
+		factsdest.put("destinationhostname", "somehost.example.org");
+		Packet pdest{ factsdest, metadata };
 
 		ptree facts2;
 		facts2.put("sourcehostname", "somehost.example.com");
-
 		Packet p2{ facts2, metadata };
 
-		BOOST_CHECK( ! r.matches(p2) );
+		{
+			ptree match;
+			match.put("hostnamematch", "*.example.org");
+
+			Rule r{ match , Verdict::accept };
+
+			BOOST_CHECK( r.matches(p) );
+			BOOST_CHECK( r.matches(pdest) );
+			BOOST_CHECK( ! r.matches(p2) );
+		}
+
+		{
+			ptree match2;
+			match2.put("sourcehostnamematch", "*.example.org");
+			Rule rule2{ match2, Verdict::accept};
+
+			BOOST_CHECK( rule2.matches(p) );
+			BOOST_CHECK( !rule2.matches(p2) );
+			BOOST_CHECK( !rule2.matches(pdest) );
+		}
+
+		{
+			ptree match3;
+			match3.put("destinationhostnamematch", "*.example.org");
+			Rule rule3{ match3, Verdict::accept};
+
+			BOOST_CHECK( !rule3.matches(p) );
+			BOOST_CHECK( rule3.matches(pdest) );
+			BOOST_CHECK( !rule3.matches(p2) );
+		}
 	}
 
 	{
