@@ -320,6 +320,12 @@ void PersonalFirewall::get_socket_owner_program(ptree& pt) {
 		}
 	}
 
+	int pcloserc = pclose(p.release());
+	if ( pcloserc != 0 )
+	{
+		BOOST_LOG_TRIVIAL(warning) << "Sub-process " << commandline << " returned error code " << pcloserc;
+	}
+
 	const string procpath = "/proc/"+pt.get<string>("pid");
 
 	{
