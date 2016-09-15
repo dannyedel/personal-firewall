@@ -398,6 +398,8 @@ void PersonalFirewall::dissect_ipv6_header( ptree& pt, pkt_buff*pktb, ip6_hdr*ip
 	} else if ( pt.get<string>("layer4protocol") == "udp" ) {
 		dissect_udp_header(pt, pktb);
 	}
+
+	get_socket_owner_program(pt);
 }
 
 namespace {
