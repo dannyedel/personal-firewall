@@ -59,15 +59,15 @@ Verdict RuleRepository::processPacket(const Packet& p) {
 	for( const auto& rule: _rules ) {
 		BOOST_LOG_TRIVIAL(trace) << "Testing rule " << rulenum << ": " << rule << " on packet " << p.id();
 		if ( rule.matches(p) ) {
-			BOOST_LOG_TRIVIAL(trace) << "Rule " << rulenum <<
+			BOOST_LOG_TRIVIAL(debug) << "Rule " << rulenum << ": " << rule <<
 				" matched, setting verdict " << rule.verdict() <<
 				" on packet " << p.id();
 			return rule.verdict();
 		}
 		++rulenum;
 	}
-	BOOST_LOG_TRIVIAL(trace) << "No rule matched, setting default verdict " <<
-		_defaultVerdict << " on packet " << p.id();
+	BOOST_LOG_TRIVIAL(info) << "No rule matched, setting default verdict " <<
+		_defaultVerdict << " on packet " << p.id() << ": " << p;
 	// No rule matched
 	return _defaultVerdict;
 }
