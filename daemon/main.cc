@@ -6,6 +6,8 @@
 #include <cstdlib> // exit
 
 #include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
 
 #include <boost/property_tree/info_parser.hpp>
 #include <boost/lexical_cast.hpp>
@@ -71,6 +73,9 @@ void PacketHandlingFunction(const Verdict& v, const path& p) {
 };
 
 int main(int argc, char** argv) {
+	boost::log::core::get() -> set_filter(
+		boost::log::trivial::severity >= boost::log::trivial::debug
+	);
 	/** FIXME: Handle command-line-options with boost **/
 
 	if ( argc < 3 ) {
