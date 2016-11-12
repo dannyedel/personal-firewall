@@ -117,6 +117,9 @@ The command-line to run the program is currently
 
 Valid default verdicts are `accept` and `reject`.
 
+All rules are loaded into program memory on startup.
+The program does not (yet) react to changes of the folder.
+
 ## Known bugs and workarounds
 
 If you have a buggy DNS server and run into constant 5-second resolve
