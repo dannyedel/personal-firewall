@@ -116,6 +116,11 @@ int main(int argc, char** argv) {
 	const Verdict verd = lexical_cast<Verdict>(argv[1]);
 	const path rulepath{ argv[2] };
 
+	if ( ! is_directory(rulepath) ) {
+		BOOST_LOG_TRIVIAL(fatal) << "Not a directory: " << rulepath;
+		return 1;
+	}
+
 	/** FIXME: Add iptables rules **/
 
 	nfq_handle* h=nfq_open();
