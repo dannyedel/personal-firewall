@@ -16,6 +16,8 @@
 
 #include <thread> // thread
 
+#include <signal.h> // signal(), SIGINT, etc.
+
 using namespace std;
 using namespace PersonalFirewall;
 using boost::property_tree::ptree;
@@ -27,7 +29,24 @@ namespace {
 
 	nfq_q_handle* qh;
 
+	int fd;
+	void PosixSignalHandler(int signalNumber) {
+		if ( signalNumber == SIGINT || signalNumber == SIGTERM) {
+			BOOST_LOG_TRIVIAL(info) << "Caught SIGINT or SIGTERM, initiating shutdown.";
+			packetqueue.shutdown();
+			{
+				int rc = close(fd);
+				BOOST_LOG_TRIVIAL(debug) << "close() returned " << rc;
+			}
+			{
+				int rc = nfq_destroy_queue(qh);
+				BOOST_LOG_TRIVIAL(debug) << "nfq_destroy_queue() returned " << rc;
+			}
+			BOOST_LOG_TRIVIAL(debug) << "Shutdown signal sent.";
+		}
+	}
 }
+
 
 void PacketHandlingFunction(const Verdict& v, const path& p) {
 
@@ -66,13 +85,16 @@ void PacketHandlingFunction(const Verdict& v, const path& p) {
 				injectThread.detach();
 			}
 		} catch( ShutdownException& e) {
-			BOOST_LOG_TRIVIAL(debug) << e.what();
 			return;
 		}
 	}
 };
 
 int main(int argc, char** argv) {
+	// Do a clean shutdown on SIGINT
+	signal(SIGINT, PosixSignalHandler);
+	signal(SIGTERM, PosixSignalHandler);
+
 	boost::log::core::get() -> set_filter(
 		boost::log::trivial::severity >= boost::log::trivial::debug
 	);
@@ -124,7 +146,7 @@ int main(int argc, char** argv) {
 		}
 	}
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE queue_handle: " << qh;
-	int fd= nfq_fd(h);
+	fd = nfq_fd(h);
 	BOOST_LOG_TRIVIAL(debug) << "NFQUEUE file descriptor: " << fd;
 
 	thread handlerThread( PacketHandlingFunction, verd, rulepath);
@@ -137,11 +159,21 @@ int main(int argc, char** argv) {
 			BOOST_LOG_TRIVIAL(trace) << "recv()'d something";
 			nfq_handle_packet(h, buf, rv); /* send packet to callback */
 		} else {
-			BOOST_LOG_TRIVIAL(warning) << "recv() returned " << rv << ", ignoring";
+			if ( packetqueue.is_shutdown() ) {
+				BOOST_LOG_TRIVIAL(info) << "Main loop exiting.";
+				// this is expected.
+				break;
+			} else {
+				BOOST_LOG_TRIVIAL(warning) << "recv() on the queue returned " << rv << ", shutting down";
+				packetqueue.shutdown();
+				break;
+			}
 		}
 	}
 
 	handlerThread.join();
+
+	BOOST_LOG_TRIVIAL(info) << "Exiting normally.";
 
 	return 0;
 }
