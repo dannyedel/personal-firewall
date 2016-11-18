@@ -50,11 +50,11 @@ namespace {
 
 void PacketHandlingFunction(const Verdict& v, const path& p) {
 
-	RuleRepository rr(v, p);
+	try{
+		RuleRepository rr(v, p);
 
-	BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
-	for(;;) {
-		try {
+		BOOST_LOG_TRIVIAL(info) << "Packet handler thread started";
+		for(;;) {
 			BOOST_LOG_TRIVIAL(trace) << "PacketHandlingFunction(): blocking on the queue";
 			Packet p = packetqueue.read();
 			try {
@@ -84,10 +84,18 @@ void PacketHandlingFunction(const Verdict& v, const path& p) {
 				thread injectThread(lookup_and_reinject, move(p), ref(packetqueue) );
 				injectThread.detach();
 			}
-		} catch( ShutdownException& e) {
-			return;
 		}
+	} catch( ShutdownException& e) {
+		// planned shutdown
+		return;
+	} catch( ::std::exception& e) {
+		// unexpected exception!
+		BOOST_LOG_TRIVIAL(error) << "Unexpected exception caught! what(): " << e.what();
+		packetqueue.shutdown();
+		close(fd);
+		return;
 	}
+
 };
 
 int main(int argc, char** argv) {
