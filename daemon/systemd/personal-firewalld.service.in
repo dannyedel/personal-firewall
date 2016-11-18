@@ -1,0 +1,17 @@
+[Unit]
+Description=Personal firewall daemon offering extended filtering options
+Documentation=https://github.com/dannyedel/personal-firewall
+# Info: systemd developers recommend Before=network-pre.target
+# for firewall services, so that rules are up when the network starts
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=simple
+ExecStart=${CMAKE_INSTALL_PREFIX}/sbin/personal-firewalld ${SERVICE_DEFAULT_VERDICT} ${SERVICE_RULE_DIRECTORY}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -36,11 +36,33 @@ target_link_libraries(personal-firewalld
 		pthread
 )
 
+### FIXME: Make these better visible to the user
+
+if(NOT SERVICE_DEFAULT_VERDICT)
+	set(SERVICE_DEFAULT_VERDICT reject)
+endif()
+
+if(NOT SERVICE_RULE_DIRECTORY)
+	set(SERVICE_RULE_DIRECTORY
+		"${CMAKE_PREFIX_PATH}/etc/personal-firewalld/rules")
+endif()
+
+configure_file(
+	systemd/personal-firewalld.service.in
+	systemd/personal-firewalld.service
+	NEWLINE_STYLE UNIX
+)
+
 include_directories(SYSTEM ${NFQUEUE_INCLUDE_DIRS})
 
 install(TARGETS
 	personal-firewalld
 	RUNTIME DESTINATION sbin
+)
+
+install(FILES
+	${CMAKE_CURRENT_BINARY_DIR}/systemd/personal-firewalld.service
+	DESTINATION /etc/systemd/system/
 )
 
 add_subdirectory(unittests)
