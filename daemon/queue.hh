@@ -4,6 +4,8 @@
 #include <queue>
 #include <stdexcept>
 
+#include <boost/log/trivial.hpp>
+
 namespace PersonalFirewall{
 
 /** The queue is being shut down
@@ -32,8 +34,10 @@ public:
 
 	// This interrupts all reading threads
 	void shutdown();
+
+	bool is_shutdown() const;
 private:
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	std::condition_variable m_cond;
 	std::queue<T> m_queue;
 	bool m_shutdown = false;
@@ -50,6 +54,7 @@ T Queue<T>::read() {
 		m_cond.wait(lock);
 	}
 	if ( m_shutdown ) {
+		BOOST_LOG_TRIVIAL(debug) << "Shutdown request detected";
 		throw ShutdownException();
 	}
 	// Move the first element outside
@@ -85,5 +90,11 @@ Queue<T>::~Queue() {
 	shutdown();
 }
 
+template<class T>
+bool Queue<T>::is_shutdown() const {
+	using namespace std;
+	unique_lock<mutex> lock{m_mutex};
+	return m_shutdown;
+}
 
 } // end namespace
